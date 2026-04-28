@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { createClient } from '@/lib/supabase/server'
+
+const MAX_STATEMENT_BYTES = 20_000 // ~20KB — enough for any bank statement
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -39,11 +42,30 @@ Regras:
 9. Retorne APENAS o JSON, sem explicações.`
 
 export async function POST(req: NextRequest) {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return NextResponse.json({ error: 'ANTHROPIC_API_KEY não configurada' }, { status: 500 })
+  // Auth guard — only authenticated users can call this endpoint
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
 
-  const { statement } = await req.json()
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return NextResponse.json({ error: 'Serviço de IA não configurado' }, { status: 503 })
+  }
+
+  // Input size guard
+  const body = await req.text()
+  if (body.length > MAX_STATEMENT_BYTES) {
+    return NextResponse.json({ error: 'Extrato muito longo (máx 20KB)' }, { status: 413 })
+  }
+
+  let statement: string
+  try {
+    statement = JSON.parse(body).statement
+  } catch {
+    return NextResponse.json({ error: 'Requisição inválida' }, { status: 400 })
+  }
+
   if (!statement?.trim()) {
     return NextResponse.json({ error: 'Extrato vazio' }, { status: 400 })
   }
