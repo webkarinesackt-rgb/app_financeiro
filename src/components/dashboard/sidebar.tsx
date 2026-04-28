@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { LayoutDashboard, ArrowLeftRight, BarChart3, Settings, TrendingUp, LogOut, ChevronDown, FileUp, CalendarCheck } from 'lucide-react'
+import { LayoutDashboard, ArrowLeftRight, BarChart3, Settings, TrendingUp, LogOut, ChevronDown, CalendarCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import { useState } from 'react'
 
@@ -15,7 +15,6 @@ const navItems = [
   { href: '/transactions', label: 'Lançamentos', icon: ArrowLeftRight },
   { href: '/reports', label: 'Relatórios', icon: BarChart3 },
   { href: '/cashflow', label: 'Fechamento', icon: CalendarCheck },
-  { href: '/import', label: 'Importar Extrato', icon: FileUp },
 ]
 
 const settingsItems = [
