@@ -89,51 +89,46 @@ export default function DashboardPage() {
     <div className="space-y-5 max-w-5xl">
       {/* Greeting + month summary + quick access */}
       <Card className="border border-slate-100 shadow-sm">
-        <CardContent className="pt-5 pb-5">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-5">
-            {/* Left: greeting + stats */}
-            <div className="space-y-4">
-              <div>
-                <p className="text-slate-500 text-sm">{getGreeting()},</p>
-                <h1 className="text-xl font-bold text-slate-800 capitalize">{userEmail}!</h1>
-              </div>
-              <div className="flex gap-6">
-                <div>
-                  <p className="text-xs text-slate-500 mb-0.5">Receitas no mês atual</p>
-                  <p className="text-lg font-bold text-emerald-600">{fmt(totalIncome)}</p>
-                </div>
-                <div className="w-px bg-slate-100" />
-                <div>
-                  <p className="text-xs text-slate-500 mb-0.5">Despesas no mês atual</p>
-                  <p className="text-lg font-bold text-red-500">{fmt(totalExpenses)}</p>
-                </div>
-              </div>
+        <CardContent className="pt-4 pb-4">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-slate-500 text-sm">{getGreeting()},</p>
+              <h1 className="text-lg font-bold text-slate-800 capitalize leading-tight">{userEmail}!</h1>
             </div>
+            <button onClick={() => setShowBalances(!showBalances)}
+              className="flex items-center justify-center h-8 w-8 rounded-full text-slate-400 hover:bg-slate-100 transition-colors">
+              {showBalances ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+            </button>
+          </div>
 
-            {/* Right: quick access */}
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Acesso rápido</p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => openForm('expense')}
-                  className="flex flex-col items-center gap-1.5 group"
-                >
-                  <div className="h-12 w-12 rounded-full border-2 border-red-500 flex items-center justify-center group-hover:bg-red-50 transition-colors">
-                    <TrendingDown className="h-5 w-5 text-red-500" />
-                  </div>
-                  <span className="text-xs text-slate-600 font-medium">DESPESA</span>
-                </button>
-                <button
-                  onClick={() => openForm('income')}
-                  className="flex flex-col items-center gap-1.5 group"
-                >
-                  <div className="h-12 w-12 rounded-full border-2 border-emerald-500 flex items-center justify-center group-hover:bg-emerald-50 transition-colors">
-                    <TrendingUp className="h-5 w-5 text-emerald-500" />
-                  </div>
-                  <span className="text-xs text-slate-600 font-medium">RECEITA</span>
-                </button>
-              </div>
+          {/* Stats row */}
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="bg-emerald-50 rounded-xl px-3 py-2.5">
+              <p className="text-[11px] text-emerald-600 font-medium mb-0.5">Receitas</p>
+              <p className="text-base font-bold text-emerald-700 leading-tight">{fmt(totalIncome)}</p>
             </div>
+            <div className="bg-red-50 rounded-xl px-3 py-2.5">
+              <p className="text-[11px] text-red-500 font-medium mb-0.5">Despesas</p>
+              <p className="text-base font-bold text-red-600 leading-tight">{fmt(totalExpenses)}</p>
+            </div>
+          </div>
+
+          {/* Quick actions */}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => openForm('expense')}
+              className="flex items-center justify-center gap-2 h-10 rounded-xl bg-red-500 text-white text-sm font-semibold active:scale-95 transition-transform shadow-sm shadow-red-200"
+            >
+              <TrendingDown className="h-4 w-4" />
+              Despesa
+            </button>
+            <button
+              onClick={() => openForm('income')}
+              className="flex items-center justify-center gap-2 h-10 rounded-xl bg-emerald-600 text-white text-sm font-semibold active:scale-95 transition-transform shadow-sm shadow-emerald-200"
+            >
+              <TrendingUp className="h-4 w-4" />
+              Receita
+            </button>
           </div>
         </CardContent>
       </Card>
@@ -254,7 +249,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Quick-add via Link */}
-      <div className="fixed bottom-20 right-4 md:bottom-6 md:right-6 flex flex-col gap-2 items-end">
+      <div className="hidden md:flex fixed bottom-6 right-6 flex-col gap-2 items-end">
         <Link href="/transactions">
           <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 shadow-lg gap-1.5 rounded-full px-4">
             <Plus className="h-4 w-4" /> Nova transação

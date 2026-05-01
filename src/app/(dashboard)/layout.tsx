@@ -21,7 +21,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
       {/* Main content */}
       <main className="flex-1 flex flex-col min-w-0">
-        <div className="flex-1 p-4 md:p-8 pb-20 md:pb-8">
+        <div className="flex-1 p-4 md:p-8 pb-32 md:pb-8">
           {children}
         </div>
       </main>
