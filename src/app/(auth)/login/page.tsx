@@ -25,7 +25,8 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
-      toast.error('Erro ao entrar', { description: 'Email ou senha incorretos.' })
+      console.error('[login] supabase error:', error)
+      toast.error('Erro ao entrar', { description: error.message })
       setLoading(false)
       return
     }

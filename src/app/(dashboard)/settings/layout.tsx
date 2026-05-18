@@ -4,6 +4,7 @@ const settingsNav = [
   { href: '/settings/accounts', label: 'Contas' },
   { href: '/settings/cards', label: 'Cartões de Crédito' },
   { href: '/settings/categories', label: 'Categorias' },
+  { href: '/settings/integrations', label: 'Integrações' },
 ]
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
