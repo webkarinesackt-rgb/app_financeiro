@@ -13,6 +13,10 @@ import { Button } from '@/components/ui/button'
 import { TransactionForm } from '@/components/transactions/transaction-form'
 import { RecentTransactions } from '@/components/dashboard/recent-transactions'
 import { ExpenseChart } from '@/components/dashboard/expense-chart'
+import { AsaasForecast } from '@/components/dashboard/asaas-forecast'
+import { IncomeBySource } from '@/components/dashboard/income-by-source'
+import { OverdueList } from '@/components/dashboard/overdue-list'
+import { RemindersCard } from '@/components/dashboard/reminders-card'
 import { TrendingDown, TrendingUp, Plus, Wallet, CreditCard, ArrowRight, Eye, EyeOff } from 'lucide-react'
 
 function getGreeting(): string {
@@ -241,6 +245,21 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Asaas — entradas atuais por origem + previsão próximos meses */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <IncomeBySource transactions={transactions} accounts={accounts} />
+        <AsaasForecast />
+      </div>
+
+      {/* Pendências manuais — contas a pagar + clientes a cobrar */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <RemindersCard type="invoice_pending" />
+        <RemindersCard type="payment_due" />
+      </div>
+
+      {/* Cobranças atrasadas (do Asaas) */}
+      <OverdueList />
 
       {/* Chart + recent transactions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

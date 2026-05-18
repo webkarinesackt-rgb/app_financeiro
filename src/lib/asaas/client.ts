@@ -78,6 +78,8 @@ export async function listPayments(
     status?: AsaasPaymentStatus
     paymentDateGe?: string  // YYYY-MM-DD
     paymentDateLe?: string
+    dueDateGe?: string
+    dueDateLe?: string
     limit?: number
     offset?: number
   } = {},
@@ -86,6 +88,8 @@ export async function listPayments(
   if (params.status) q.set('status', params.status)
   if (params.paymentDateGe) q.set('paymentDate[ge]', params.paymentDateGe)
   if (params.paymentDateLe) q.set('paymentDate[le]', params.paymentDateLe)
+  if (params.dueDateGe) q.set('dueDate[ge]', params.dueDateGe)
+  if (params.dueDateLe) q.set('dueDate[le]', params.dueDateLe)
   q.set('limit', String(params.limit ?? 100))
   q.set('offset', String(params.offset ?? 0))
   return asaasFetch(env, apiKey, `/payments?${q.toString()}`)
