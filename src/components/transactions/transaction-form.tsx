@@ -16,6 +16,7 @@ import { getCreditCards } from '@/lib/credit-cards'
 import {
   CATEGORY_LABELS, RECURRENCE_LABELS, PAYMENT_METHOD_LABELS,
   INCOME_CATEGORIES, EXPENSE_CATEGORIES, ACCOUNT_PAYMENT_METHODS,
+  getSubcategoryOptions,
   type Transaction, type TransactionFormData, type TransactionType,
   type Category, type RecurrenceInterval, type PaymentMethod,
   type Account, type CreditCard,
@@ -42,6 +43,7 @@ export function TransactionForm({ open, onClose, onSuccess, transaction, default
   const [description, setDescription] = useState(transaction?.description ?? '')
   const [category, setCategory] = useState<Category>(transaction?.category ?? (defaultType === 'income' ? 'salary' : 'food'))
   const [customCategory, setCustomCategory] = useState(transaction?.custom_category ?? '')
+  const [subcategory, setSubcategory] = useState(transaction?.subcategory ?? '')
   const [date, setDate] = useState(transaction?.date ?? today)
   const [accountId, setAccountId] = useState(transaction?.account_id ?? '')
   const [creditCardId, setCreditCardId] = useState(transaction?.credit_card_id ?? '')
@@ -98,10 +100,18 @@ export function TransactionForm({ open, onClose, onSuccess, transaction, default
     if (isNaN(numAmount) || numAmount <= 0) { toast.error('Valor inválido'); return }
     if (category === 'custom' && !customCategory.trim()) { toast.error('Informe o nome da categoria personalizada'); return }
 
+    const finalCustom = category === 'custom' ? customCategory.trim() : null
+    const subcategoryOptions = getSubcategoryOptions(finalCustom)
+    const finalSubcategory =
+      finalCustom && subcategoryOptions.length > 0 && subcategory && subcategoryOptions.includes(subcategory)
+        ? subcategory
+        : null
+
     const data: TransactionFormData = {
       type, amount: numAmount, description,
       category,
-      custom_category: category === 'custom' ? customCategory.trim() : null,
+      custom_category: finalCustom,
+      subcategory: finalSubcategory,
       date,
       account_id: accountId || null,
       credit_card_id: creditCardId || null,
@@ -331,6 +341,19 @@ export function TransactionForm({ open, onClose, onSuccess, transaction, default
             {category === 'custom' && (
               <Input placeholder="Nome da categoria (ex: Consultoria Jurídica)"
                 value={customCategory} onChange={(e) => setCustomCategory(e.target.value)} autoFocus />
+            )}
+
+            {category === 'custom' && getSubcategoryOptions(customCategory.trim()).length > 0 && (
+              <Select value={subcategory} onValueChange={(v) => setSubcategory(v ?? '')}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Subcategoria (tipo de projeto)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {getSubcategoryOptions(customCategory.trim()).map((sub) => (
+                    <SelectItem key={sub} value={sub}>{sub}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
           </div>
 

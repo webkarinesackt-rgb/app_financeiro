@@ -10,6 +10,7 @@ import { getCreditCards } from '@/lib/credit-cards'
 import { getCustomCategories } from '@/lib/transactions'
 import {
   CATEGORY_LABELS, INCOME_CATEGORIES, EXPENSE_CATEGORIES,
+  getSubcategoryOptions,
   type Account, type CreditCard, type Category,
 } from '@/types'
 import { X, Wallet, CreditCard as CardIcon } from 'lucide-react'
@@ -18,12 +19,13 @@ interface TransactionFiltersProps {
   month: number
   year: number
   category: string
+  subcategory: string
   type: string
   accountId: string
   creditCardId: string
 }
 
-export function TransactionFilters({ month, year, category, type, accountId, creditCardId }: TransactionFiltersProps) {
+export function TransactionFilters({ month, year, category, subcategory, type, accountId, creditCardId }: TransactionFiltersProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [accounts, setAccounts] = useState<Account[]>([])
@@ -50,7 +52,9 @@ export function TransactionFilters({ month, year, category, type, accountId, cre
       if (key === 'accountId') params.delete('creditCardId')
       if (key === 'creditCardId') params.delete('accountId')
       // Trocar de tipo limpa a categoria (pra evitar filtro inválido tipo "income + Alimentação")
-      if (key === 'type') params.delete('category')
+      if (key === 'type') { params.delete('category'); params.delete('subcategory') }
+      // Trocar de categoria limpa a subcategoria
+      if (key === 'category') params.delete('subcategory')
     }
     router.push(`?${params.toString()}`)
   }
@@ -62,7 +66,11 @@ export function TransactionFilters({ month, year, category, type, accountId, cre
     router.push(`?${params.toString()}`)
   }
 
-  const hasActiveFilters = category !== 'all' || type !== 'all' || accountId !== 'all' || creditCardId !== 'all'
+  const hasActiveFilters = category !== 'all' || subcategory !== 'all' || type !== 'all' || accountId !== 'all' || creditCardId !== 'all'
+
+  // Mostra dropdown de subcategoria quando a categoria selecionada é uma custom com subs definidas
+  const currentCustomCategory = category.startsWith('custom:') ? category.slice(7) : null
+  const subOptions = currentCustomCategory ? getSubcategoryOptions(currentCustomCategory) : []
 
   // Decide quais categorias built-in mostrar com base no tipo
   const builtInCategories: Category[] =
@@ -113,6 +121,21 @@ export function TransactionFilters({ month, year, category, type, accountId, cre
           ))}
         </SelectContent>
       </Select>
+
+      {/* Subcategoria (só aparece se a categoria atual tem subs) */}
+      {subOptions.length > 0 && (
+        <Select value={subcategory} onValueChange={(v) => setParam('subcategory', v ?? 'all')}>
+          <SelectTrigger className="w-[180px] h-8 text-sm">
+            <SelectValue placeholder="Tipo de projeto" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os tipos</SelectItem>
+            {subOptions.map((sub) => (
+              <SelectItem key={sub} value={sub}>{sub}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
 
       {/* Conta */}
       {accounts.length > 0 && (

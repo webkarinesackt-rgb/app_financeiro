@@ -19,6 +19,7 @@ export interface Transaction {
   description: string
   category: Category
   custom_category: string | null
+  subcategory: string | null
   date: string
   account_id: string | null
   credit_card_id: string | null
@@ -39,6 +40,7 @@ export interface TransactionFormData {
   description: string
   category: Category
   custom_category: string | null
+  subcategory: string | null
   date: string
   account_id: string | null
   credit_card_id: string | null
@@ -192,6 +194,25 @@ export const CLOSING_MARKETS = [
 ] as const
 
 export const CLOSING_BUSINESS_MODELS = ['Serviço', 'Infoproduto', 'Produto', 'Outro'] as const
+
+// ─── Subcategorias por custom_category ───────────────────────────────────────
+// Quando uma transação tem category='custom' e custom_category em alguma das
+// chaves abaixo, oferece um dropdown adicional de subcategoria.
+
+export const SUBCATEGORIES_BY_CUSTOM_CATEGORY: Record<string, string[]> = {
+  'Receita Landing Page / Site': [
+    'Landing page com copy',
+    'Landing page sem copy',
+    'Programação',
+    'Site institucional',
+    'Alterações',
+  ],
+}
+
+export function getSubcategoryOptions(customCategory: string | null | undefined): string[] {
+  if (!customCategory) return []
+  return SUBCATEGORIES_BY_CUSTOM_CATEGORY[customCategory] ?? []
+}
 
 // ─── Custos Fixos (equipe / infra) ───────────────────────────────────────────
 

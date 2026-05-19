@@ -108,6 +108,11 @@ export function TransactionList({ transactions, accounts = [], cards = [], onRef
                       <Badge variant="outline" className="text-xs shrink-0 hidden sm:flex">
                         {getCategoryLabel(t.category, t.custom_category)}
                       </Badge>
+                      {t.subcategory && (
+                        <Badge variant="outline" className="text-xs shrink-0 hidden sm:flex bg-emerald-50 border-emerald-200 text-emerald-700">
+                          {t.subcategory}
+                        </Badge>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                       <p className="text-xs text-slate-400">{formatDate(t.date)}</p>

@@ -231,6 +231,7 @@ export default function ImportPage() {
           date: tx.date,
           category: tx.category,
           custom_category: null,
+          subcategory: null,
           payment_method: creditCardId ? 'credit' : tx.payment_method,
           account_id: accountId || null,
           credit_card_id: creditCardId || null,

@@ -26,6 +26,7 @@ export async function getTransactions(filters?: {
   month?: number
   year?: number
   category?: string
+  subcategory?: string
   type?: string
   accountId?: string
   creditCardId?: string
@@ -46,6 +47,7 @@ export async function getTransactions(filters?: {
     }
   }
   if (filters?.type && filters.type !== 'all') query = query.eq('type', filters.type)
+  if (filters?.subcategory && filters.subcategory !== 'all') query = query.eq('subcategory', filters.subcategory)
   if (filters?.accountId && filters.accountId !== 'all') query = query.eq('account_id', filters.accountId)
   if (filters?.creditCardId && filters.creditCardId !== 'all') query = query.eq('credit_card_id', filters.creditCardId)
 

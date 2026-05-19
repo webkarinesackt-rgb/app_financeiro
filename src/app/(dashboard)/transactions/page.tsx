@@ -19,6 +19,7 @@ function TransactionsContent() {
   const month = Number(searchParams.get('month')) || now.getMonth() + 1
   const year = Number(searchParams.get('year')) || now.getFullYear()
   const category = searchParams.get('category') ?? 'all'
+  const subcategory = searchParams.get('subcategory') ?? 'all'
   const type = searchParams.get('type') ?? 'all'
   const accountId = searchParams.get('accountId') ?? 'all'
   const creditCardId = searchParams.get('creditCardId') ?? 'all'
@@ -33,7 +34,7 @@ function TransactionsContent() {
     setLoading(true)
     try {
       const [txs, accs, crds] = await Promise.all([
-        getTransactions({ month, year, category, type, accountId, creditCardId }),
+        getTransactions({ month, year, category, subcategory, type, accountId, creditCardId }),
         getAccounts(),
         getCreditCards(),
       ])
@@ -43,7 +44,7 @@ function TransactionsContent() {
     } finally {
       setLoading(false)
     }
-  }, [month, year, category, type, accountId, creditCardId])
+  }, [month, year, category, subcategory, type, accountId, creditCardId])
 
   useEffect(() => { fetchAll() }, [fetchAll])
 
@@ -85,6 +86,7 @@ function TransactionsContent() {
           month={month}
           year={year}
           category={category}
+          subcategory={subcategory}
           type={type}
           accountId={accountId}
           creditCardId={creditCardId}
