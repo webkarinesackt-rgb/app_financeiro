@@ -48,10 +48,12 @@ const EXPENSE_ACTIONS: ActionDef[] = [
   { label: 'Ferramentas / Software', shortcut: '2', customCategory: 'Ferramentas', subcategory: null, color: 'bg-blue-600 hover:bg-blue-700', emoji: '🛠️' },
   { label: 'Infraestrutura', shortcut: '3', customCategory: 'Infraestrutura', subcategory: null, color: 'bg-purple-600 hover:bg-purple-700', emoji: '🖥️' },
   { label: 'Equipe', shortcut: '4', customCategory: 'Equipe', subcategory: null, color: 'bg-emerald-600 hover:bg-emerald-700', emoji: '👥' },
-  { label: 'Impostos', shortcut: '5', customCategory: 'Impostos', subcategory: null, color: 'bg-amber-600 hover:bg-amber-700', emoji: '🧾' },
-  { label: 'Encargos / Juros', shortcut: '6', customCategory: 'Encargos financeiros', subcategory: null, color: 'bg-orange-600 hover:bg-orange-700', emoji: '💸' },
-  { label: 'Alimentação', shortcut: '7', customCategory: 'Alimentação', subcategory: null, color: 'bg-yellow-600 hover:bg-yellow-700', emoji: '🍽️' },
-  { label: 'Outros', shortcut: '8', customCategory: 'Outros', subcategory: null, color: 'bg-slate-600 hover:bg-slate-700', emoji: '📦' },
+  { label: 'Cursos / Treinamentos', shortcut: '5', customCategory: 'Cursos / Treinamentos', subcategory: null, color: 'bg-indigo-600 hover:bg-indigo-700', emoji: '🎓' },
+  { label: 'Contabilidade / Jurídico', shortcut: '6', customCategory: 'Contabilidade', subcategory: null, color: 'bg-cyan-600 hover:bg-cyan-700', emoji: '📊' },
+  { label: 'Impostos', shortcut: '7', customCategory: 'Impostos', subcategory: null, color: 'bg-amber-600 hover:bg-amber-700', emoji: '🧾' },
+  { label: 'Encargos / Juros', shortcut: '8', customCategory: 'Encargos financeiros', subcategory: null, color: 'bg-orange-600 hover:bg-orange-700', emoji: '💸' },
+  { label: 'Alimentação', shortcut: '9', customCategory: 'Alimentação', subcategory: null, color: 'bg-yellow-600 hover:bg-yellow-700', emoji: '🍽️' },
+  { label: 'Outros', shortcut: '0', customCategory: 'Outros', subcategory: null, color: 'bg-slate-600 hover:bg-slate-700', emoji: '📦' },
 ]
 
 const CURRENT_YEAR_START = `${new Date().getFullYear()}-01-01`
