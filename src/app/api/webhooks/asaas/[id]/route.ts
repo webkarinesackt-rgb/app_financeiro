@@ -3,8 +3,11 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getCustomer, type AsaasEnv, type AsaasPayment } from '@/lib/asaas/client'
 import { buildDescription } from '@/lib/asaas/description'
 
-// Eventos que disparam criação de transação (cobrança efetivamente paga).
-const INGEST_EVENTS = new Set(['PAYMENT_RECEIVED', 'PAYMENT_CONFIRMED'])
+// Regime de caixa: só ingerimos quando o dinheiro de fato entra na conta
+// (PAYMENT_RECEIVED). PAYMENT_CONFIRMED é "cliente pagou mas aguardando
+// repasse" — relevante pra forecast em /api/asaas/awaiting-settlement,
+// mas NÃO deve virar transação realizada (parcelas futuras inflam o caixa).
+const INGEST_EVENTS = new Set(['PAYMENT_RECEIVED', 'PAYMENT_RECEIVED_IN_CASH'])
 
 interface AsaasWebhookBody {
   event: string

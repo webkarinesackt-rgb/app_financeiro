@@ -54,7 +54,11 @@ export async function POST(
     return name
   }
 
-  const statuses: AsaasPaymentStatus[] = ['RECEIVED', 'CONFIRMED']
+  // Regime de caixa: apenas RECEIVED (dinheiro já em conta) e RECEIVED_IN_CASH.
+  // CONFIRMED = pago pelo cliente mas aguardando repasse — aparece em
+  // /api/asaas/awaiting-settlement, NÃO entra como transação realizada.
+  // Importar CONFIRMED inflava o caixa com parcelas futuras de cartão.
+  const statuses: AsaasPaymentStatus[] = ['RECEIVED', 'RECEIVED_IN_CASH']
 
   for (const status of statuses) {
     const iter = paginate<AsaasPayment>((offset) =>
