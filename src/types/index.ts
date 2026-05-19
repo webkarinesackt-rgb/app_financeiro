@@ -104,6 +104,105 @@ export interface CreditCardWithUsage extends CreditCard {
   currentInvoice: number
 }
 
+// ─── Closings (Projetos/Fechamentos do mês) ──────────────────────────────────
+
+export type ClosingStatus = 'closed' | 'in_production' | 'delivered' | 'paid' | 'cancelled'
+
+export interface Closing {
+  id: string
+  user_id: string
+  name: string
+  client_name: string | null
+  project_kind: string | null
+  total_value: number
+  channel: string | null
+  market: string | null
+  business_model: string | null
+  segment: string | null
+  whatsapp: string | null
+  start_date: string
+  status: ClosingStatus
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ClosingFormData {
+  client_name: string
+  project_kind: string | null
+  total_value: number
+  channel: string | null
+  market: string | null
+  business_model: string | null
+  segment: string | null
+  whatsapp: string | null
+  start_date: string
+  status: ClosingStatus
+  notes: string | null
+}
+
+export const CLOSING_STATUS_LABELS: Record<ClosingStatus, string> = {
+  closed: 'Fechado · Criar pasta',
+  in_production: 'Em produção',
+  delivered: 'Entregue',
+  paid: 'Pago',
+  cancelled: 'Cancelado',
+}
+
+export const CLOSING_STATUS_COLORS: Record<ClosingStatus, string> = {
+  closed: '#10b981',
+  in_production: '#f59e0b',
+  delivered: '#3b82f6',
+  paid: '#22c55e',
+  cancelled: '#ef4444',
+}
+
+export const PROJECT_KINDS = [
+  'Site Institucional',
+  'Landing Page',
+  'Landing Page + Copy',
+  'Identidade Visual',
+  'Slide',
+  'Tráfego Pago',
+  'Consultoria',
+  'Outro',
+] as const
+
+export const CLOSING_CHANNELS = [
+  'Instagram',
+  'Indicação',
+  'Anúncios Landing Page',
+  'Site',
+  'WhatsApp',
+  'Outro',
+] as const
+
+export const CLOSING_MARKETS = [
+  'Imobiliário',
+  'Saúde',
+  'Jurídico',
+  'Tecnologia',
+  'Marketing',
+  'Autoconhecimento',
+  'Educação',
+  'Infoprodutor',
+  'Outro',
+] as const
+
+export const CLOSING_BUSINESS_MODELS = ['Serviço', 'Infoproduto', 'Produto', 'Outro'] as const
+
+export const CLOSING_SEGMENTS = [
+  'Engenharia',
+  'Corretores',
+  'Hipnoterapia',
+  'Inteligência Artificial',
+  'Academia',
+  'Advogado',
+  'Tecnologia',
+  'Infoproduto',
+  'Outro',
+] as const
+
 // ─── Labels & Constants ───────────────────────────────────────────────────────
 
 export const CATEGORY_LABELS: Record<Category, string> = {
