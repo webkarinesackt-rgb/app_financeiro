@@ -16,16 +16,22 @@ import type { CreditCard } from '@/types'
 import { CATEGORY_LABELS, PAYMENT_METHOD_LABELS } from '@/types'
 import type { Account, Category, PaymentMethod } from '@/types'
 
-// Heurística: descrições que sugerem repasse interno (Asaas → conta, ou
-// movimentação entre contas da mesma empresa). Vêm desmarcadas por padrão
-// para evitar duplicação com integrações ou lançamentos manuais.
+// Heurística: descrições que sugerem movimentação interna (entre contas
+// da mesma empresa, repasses de gateway, aplicações em CDB/poupança).
+// Vêm desmarcadas por padrão para não contar como receita ou despesa real.
 function isAsaasTransfer(description: string): boolean {
   const d = description.toLowerCase()
-  // Repasses Asaas
+  // Repasses de gateway de pagamento (Asaas)
   if (d.includes('asaas')) return true
-  // Transferências internas — empresa Fysi
+  // Transferências internas entre contas da Fysi
   if (/\bfysi\s?lab\b/i.test(description)) return true
   if (/fysi lab digital/i.test(description)) return true
+  // Aplicações e resgates de CDB / poupança / RDB → vão pra "reservas",
+  // não são receita nem despesa do operacional
+  if (/^aplicacao\b|\baplicacao\s+(em\s+)?cdb\b/i.test(description)) return true
+  if (/^resgate\b|\bresgate\s+(de\s+)?cdb\b/i.test(description)) return true
+  if (/\bcdb\b.*(banco|inter|btg|nubank|xp)/i.test(description)) return true
+  if (/^poupanca\b|\baplicacao poupanca\b|\bresgate poupanca\b/i.test(description)) return true
   return false
 }
 
