@@ -23,6 +23,7 @@ const settingsItems = [
   { href: '/settings/accounts', label: 'Contas' },
   { href: '/settings/cards', label: 'Cartões de Crédito' },
   { href: '/settings/categories', label: 'Categorias' },
+  { href: '/settings/integrations', label: 'Integrações (Asaas)' },
 ]
 
 export function Sidebar() {
