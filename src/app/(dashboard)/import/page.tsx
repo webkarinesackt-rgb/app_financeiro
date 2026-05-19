@@ -16,11 +16,17 @@ import type { CreditCard } from '@/types'
 import { CATEGORY_LABELS, PAYMENT_METHOD_LABELS } from '@/types'
 import type { Account, Category, PaymentMethod } from '@/types'
 
-// Heurística: descrições que sugerem repasse Asaas → conta bancária.
-// Quando detectado, a linha é desmarcada por default (já vem via integração Asaas).
+// Heurística: descrições que sugerem repasse interno (Asaas → conta, ou
+// movimentação entre contas da mesma empresa). Vêm desmarcadas por padrão
+// para evitar duplicação com integrações ou lançamentos manuais.
 function isAsaasTransfer(description: string): boolean {
   const d = description.toLowerCase()
-  return d.includes('asaas') || /\bted\b.*asaas\b/i.test(description)
+  // Repasses Asaas
+  if (d.includes('asaas')) return true
+  // Transferências internas — empresa Fysi
+  if (/\bfysi\s?lab\b/i.test(description)) return true
+  if (/fysi lab digital/i.test(description)) return true
+  return false
 }
 
 interface ParsedTransaction {
@@ -297,7 +303,7 @@ export default function ImportPage() {
               <strong>Fatura de cartão</strong> (compras do cartão) → escolha um <strong>cartão</strong>.
             </div>
             <div>
-              Linhas com &ldquo;asaas&rdquo; (repasse) ou &ldquo;pagamento on line&rdquo; (pagto de fatura) vêm <strong>desmarcadas</strong> automaticamente.
+              Linhas com &ldquo;asaas&rdquo;, &ldquo;Fysi Lab&rdquo; (transferência interna) ou &ldquo;pagamento on line&rdquo; (pagto de fatura) vêm <strong>desmarcadas</strong> automaticamente.
             </div>
           </div>
         </div>
