@@ -195,6 +195,32 @@ export const CLOSING_MARKETS = [
 
 export const CLOSING_BUSINESS_MODELS = ['Serviço', 'Infoproduto', 'Produto', 'Outro'] as const
 
+// ─── Clientes Recorrentes (MRR) ──────────────────────────────────────────────
+
+export interface RecurringClient {
+  id: string
+  user_id: string
+  name: string
+  amount: number
+  billing_day: number | null
+  service_type: string | null
+  active: boolean
+  notes: string | null
+  started_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface RecurringClientFormData {
+  name: string
+  amount: number
+  billing_day: number | null
+  service_type: string | null
+  active: boolean
+  notes: string | null
+  started_at: string | null
+}
+
 // ─── Subcategorias por custom_category ───────────────────────────────────────
 // Quando uma transação tem category='custom' e custom_category em alguma das
 // chaves abaixo, oferece um dropdown adicional de subcategoria.

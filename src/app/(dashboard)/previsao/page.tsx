@@ -10,6 +10,7 @@ import { getTransactions } from '@/lib/transactions'
 import { buildForecast, type ForecastResult } from '@/lib/forecast'
 import { formatCurrency } from '@/lib/format'
 import { FixedCostsSection } from '@/components/previsao/fixed-costs-section'
+import { RecurringClientsSection } from '@/components/previsao/recurring-clients-section'
 import type { Transaction } from '@/types'
 
 export default function PrevisaoPage() {
@@ -73,6 +74,9 @@ export default function PrevisaoPage() {
           </Select>
         </div>
       </div>
+
+      {/* Clientes recorrentes (MRR) — receita prevista */}
+      <RecurringClientsSection />
 
       {/* Custos fixos vem sempre, mesmo sem histórico */}
       <FixedCostsSection onChange={setFixedCostsMonthly} />
