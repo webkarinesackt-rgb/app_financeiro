@@ -146,7 +146,7 @@ export default function ImportPage() {
         selected: !isAsaasTransfer(t.description) && !t.isCardPayment,
       }))
 
-      // Se é fatura de cartão e tem cartão cadastrado, troca o destino automaticamente
+      // Auto-roteamento do destino baseado no formato detectado.
       let extraNote = ''
       if (result.format === 'card_invoice') {
         if (cards.length > 0 && !destination.startsWith('card:')) {
@@ -154,6 +154,15 @@ export default function ImportPage() {
           extraNote = ` Destino trocado pro cartão "${cards[0].name}".`
         } else if (cards.length === 0) {
           extraNote = ' ⚠️ Nenhum cartão cadastrado — cadastra em /settings/cards antes de importar.'
+        }
+      } else if (result.format === 'checking') {
+        // Extrato de conta: prioriza conta Inter operacional (Fysi Lab).
+        const interAccount = accounts.find((a) => a.bank === 'inter' && a.kind !== 'reserve')
+        const operational = accounts.find((a) => a.kind !== 'reserve')
+        const target = interAccount ?? operational
+        if (target && destination !== `acc:${target.id}`) {
+          setDestination(`acc:${target.id}`)
+          extraNote = ` Destino: "${target.name}".`
         }
       }
 
