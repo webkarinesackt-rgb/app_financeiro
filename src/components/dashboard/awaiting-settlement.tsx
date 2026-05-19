@@ -9,6 +9,7 @@ interface Data {
   total: number
   count: number
   byIntegration: { id: string; name: string; total: number; count: number }[]
+  byMonth?: { month: string; monthLabel: string; total: number; count: number }[]
 }
 
 export function AwaitingSettlement() {
@@ -59,6 +60,23 @@ export function AwaitingSettlement() {
             {data.byIntegration.map((b) => (
               <span key={b.id}>{b.name}: <span className="font-semibold text-slate-700">{formatCurrency(b.total)}</span></span>
             ))}
+          </div>
+        )}
+
+        {data && data.byMonth && data.byMonth.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-blue-100">
+            <p className="text-[10px] font-semibold text-slate-400 uppercase mb-2">Por mês de repasse</p>
+            <div className="space-y-1.5">
+              {data.byMonth.map((m) => (
+                <div key={m.month} className="flex items-center justify-between text-xs">
+                  <span className="text-slate-500">{m.monthLabel}</span>
+                  <span className="font-semibold text-blue-700">
+                    {formatCurrency(m.total)}
+                    <span className="text-slate-400 font-normal ml-1.5">({m.count})</span>
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </CardContent>
