@@ -2,6 +2,103 @@ import { addMonths } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import type { Transaction, TransactionFormData } from '@/types'
 
+// Extrai o "nome do cliente" da descrição (helper compartilhado).
+function extractClientPattern(description: string): string | null {
+  const m1 = description.match(/^([^—]+?)\s*—/)
+  if (m1 && m1[1].trim().length >= 4) return m1[1].trim()
+  const m2 = description.match(/Cp\s*:[\d]+-(.+?)(\s+\d{6,}|$)/)
+  if (m2 && m2[1].trim().length >= 4) return m2[1].trim()
+  return null
+}
+
+// Aplica a mesma categorização a TODAS as transações do mesmo cliente
+// (match por nome extraído da description). Retorna quantas foram atualizadas.
+export async function applyCategoryToSimilarTransactions(
+  sourceId: string,
+  description: string,
+  type: 'income' | 'expense',
+  customCategory: string | null,
+  subcategory: string | null,
+): Promise<number> {
+  const pattern = extractClientPattern(description)
+  if (!pattern) return 0
+  const clean = pattern.replace(/[%_]/g, '').trim()
+  if (clean.length < 4) return 0
+
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return 0
+
+  const { data: similar } = await supabase
+    .from('transactions')
+    .select('id, custom_category, subcategory, category')
+    .eq('type', type)
+    .eq('user_id', user.id)
+    .neq('id', sourceId)
+    .ilike('description', `%${clean}%`)
+
+  if (!similar || similar.length === 0) return 0
+
+  const toUpdate = similar.filter((t) =>
+    t.custom_category !== customCategory || t.subcategory !== subcategory
+  )
+  if (toUpdate.length === 0) return 0
+
+  const ids = toUpdate.map((t) => t.id)
+  const { error } = await supabase
+    .from('transactions')
+    .update({
+      category: customCategory ? 'custom' : 'other',
+      custom_category: customCategory,
+      subcategory,
+      updated_at: new Date().toISOString(),
+    })
+    .in('id', ids)
+
+  if (error) return 0
+  return toUpdate.length
+}
+
+// Tenta detectar a custom_category (e subcategory) com base em transações
+// similares (mesmo cliente). Útil pra pré-preencher o form de edição.
+export async function findCategoryByDescriptionPattern(
+  description: string,
+  type: 'income' | 'expense',
+): Promise<{ custom_category: string; subcategory: string | null } | null> {
+  if (!description) return null
+  const supabase = createClient()
+
+  // Extrai possíveis "nomes de cliente" da descrição
+  const patterns: string[] = []
+  const m1 = description.match(/^([^—]+)\s*—/)
+  if (m1) patterns.push(m1[1].trim())
+  const m2 = description.match(/Cp\s*:[\d]+-(.+?)(\s+\d{6,}|$)/)
+  if (m2) patterns.push(m2[1].trim())
+  const words = description.split(/\s+/).filter((w) => w.length >= 4)
+  if (words.length >= 2) patterns.push(words.slice(0, 2).join(' '))
+
+  for (const raw of patterns) {
+    const clean = raw.replace(/[%_]/g, '').trim()
+    if (clean.length < 4) continue
+    const { data } = await supabase
+      .from('transactions')
+      .select('custom_category, subcategory')
+      .eq('type', type)
+      .eq('category', 'custom')
+      .not('custom_category', 'is', null)
+      .ilike('description', `%${clean}%`)
+      .order('date', { ascending: false })
+      .limit(1)
+    if (data && data.length > 0 && data[0].custom_category) {
+      return {
+        custom_category: data[0].custom_category,
+        subcategory: data[0].subcategory ?? null,
+      }
+    }
+  }
+  return null
+}
+
 // Retorna as custom_category distintas usadas pelo usuário, opcionalmente filtradas
 // por tipo (income/expense). Usado pra montar dropdowns de filtro.
 export async function getCustomCategories(type?: 'income' | 'expense'): Promise<string[]> {

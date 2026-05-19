@@ -9,7 +9,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Loader2, RefreshCw, CreditCard as CardIcon, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
-import { createTransaction, updateTransaction } from '@/lib/transactions'
+import {
+  createTransaction, updateTransaction,
+  getCustomCategories, findCategoryByDescriptionPattern,
+  applyCategoryToSimilarTransactions,
+} from '@/lib/transactions'
 import { parseBRLAmount } from '@/lib/format'
 import { getAccounts } from '@/lib/accounts'
 import { getCreditCards } from '@/lib/credit-cards'
@@ -44,6 +48,9 @@ export function TransactionForm({ open, onClose, onSuccess, transaction, default
   const [category, setCategory] = useState<Category>(transaction?.category ?? (defaultType === 'income' ? 'salary' : 'food'))
   const [customCategory, setCustomCategory] = useState(transaction?.custom_category ?? '')
   const [subcategory, setSubcategory] = useState(transaction?.subcategory ?? '')
+  const [existingCustoms, setExistingCustoms] = useState<string[]>([])
+  const [showCustomInput, setShowCustomInput] = useState(false)
+  const [applyToSimilar, setApplyToSimilar] = useState(true)
   const [date, setDate] = useState(transaction?.date ?? today)
   const [accountId, setAccountId] = useState(transaction?.account_id ?? '')
   const [creditCardId, setCreditCardId] = useState(transaction?.credit_card_id ?? '')
@@ -64,7 +71,19 @@ export function TransactionForm({ open, onClose, onSuccess, transaction, default
     if (!open) return
     getAccounts().then(setAccounts).catch(() => {})
     getCreditCards().then(setCards).catch(() => {})
-  }, [open])
+    getCustomCategories(type).then(setExistingCustoms).catch(() => setExistingCustoms([]))
+
+    // Pattern match: se editando transação sem categoria, sugere baseado em outras do mesmo cliente
+    if (transaction && transaction.category === 'other' && !transaction.custom_category && transaction.description) {
+      findCategoryByDescriptionPattern(transaction.description, transaction.type).then((match) => {
+        if (match) {
+          setCategory('custom')
+          setCustomCategory(match.custom_category)
+          if (match.subcategory) setSubcategory(match.subcategory)
+        }
+      }).catch(() => {})
+    }
+  }, [open, type, transaction])
 
   function handleTypeChange(newType: TransactionType) {
     setType(newType)
@@ -131,6 +150,24 @@ export function TransactionForm({ open, onClose, onSuccess, transaction, default
       if (isEditing) {
         await updateTransaction(transaction.id, data)
         toast.success('Transação atualizada!')
+
+        // Aplica a mesma categorização nas outras transações do mesmo cliente
+        if (applyToSimilar && finalCustom && transaction.description) {
+          try {
+            const updated = await applyCategoryToSimilarTransactions(
+              transaction.id,
+              transaction.description,
+              type,
+              finalCustom,
+              finalSubcategory,
+            )
+            if (updated > 0) {
+              toast.success(`${updated} outra(s) transação(ões) do mesmo cliente atualizada(s)`)
+            }
+          } catch (e) {
+            console.warn('Falha ao aplicar a similares:', e)
+          }
+        }
       } else {
         const delay = isIncomeInstallment && type === 'income' ? (parseInt(incomeInstallmentDelay) || 1) : 0
         const created = await createTransaction(data, { incomeInstallmentDelay: delay })
@@ -338,9 +375,42 @@ export function TransactionForm({ open, onClose, onSuccess, transaction, default
                 ))}
               </SelectContent>
             </Select>
-            {category === 'custom' && (
-              <Input placeholder="Nome da categoria (ex: Consultoria Jurídica)"
-                value={customCategory} onChange={(e) => setCustomCategory(e.target.value)} autoFocus />
+            {category === 'custom' && existingCustoms.length > 0 && !showCustomInput && (
+              <Select
+                value={customCategory}
+                onValueChange={(v) => {
+                  if (v === '__new__') {
+                    setShowCustomInput(true)
+                    setCustomCategory('')
+                  } else if (v) {
+                    setCustomCategory(v)
+                    setSubcategory('')  // reset subcategory ao trocar custom
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Escolha uma categoria existente..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {existingCustoms.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                  <SelectItem value="__new__">+ Criar nova categoria...</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+
+            {category === 'custom' && (showCustomInput || existingCustoms.length === 0) && (
+              <div className="flex gap-2">
+                <Input placeholder="Nome da nova categoria"
+                  value={customCategory} onChange={(e) => setCustomCategory(e.target.value)} autoFocus />
+                {existingCustoms.length > 0 && (
+                  <Button type="button" variant="ghost" size="sm" className="h-9 px-2 text-xs"
+                    onClick={() => { setShowCustomInput(false); setCustomCategory('') }}>
+                    ← Lista
+                  </Button>
+                )}
+              </div>
             )}
 
             {category === 'custom' && getSubcategoryOptions(customCategory.trim()).length > 0 && (
@@ -354,6 +424,18 @@ export function TransactionForm({ open, onClose, onSuccess, transaction, default
                   ))}
                 </SelectContent>
               </Select>
+            )}
+
+            {isEditing && category === 'custom' && customCategory.trim() && (
+              <button type="button" onClick={() => setApplyToSimilar(!applyToSimilar)}
+                className="flex items-start gap-2 w-full text-left mt-1">
+                <div className={`relative inline-flex h-4 w-7 shrink-0 mt-0.5 rounded-full transition-colors ${applyToSimilar ? 'bg-emerald-500' : 'bg-slate-200'}`}>
+                  <span className={`inline-block h-3 w-3 translate-y-0.5 rounded-full bg-white shadow transition-transform ${applyToSimilar ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
+                </div>
+                <span className="text-xs text-slate-600 leading-tight">
+                  Aplicar a outras transações do mesmo cliente automaticamente
+                </span>
+              </button>
             )}
           </div>
 
