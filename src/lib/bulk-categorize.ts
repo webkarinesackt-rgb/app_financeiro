@@ -22,14 +22,19 @@ function extractClient(description: string): string | null {
 
 // Lista clientes únicos das transações em "Receita Landing Page / Site"
 // sem subcategoria definida — agrupado por nome extraído da description.
-export async function getUncategorizedLPClients(): Promise<UncategorizedClient[]> {
+// fromDate: opcional, filtra só transações a partir dessa data (YYYY-MM-DD).
+export async function getUncategorizedLPClients(fromDate?: string): Promise<UncategorizedClient[]> {
   const supabase = createClient()
-  const { data, error } = await supabase
+  let query = supabase
     .from('transactions')
     .select('description, amount, date')
     .eq('custom_category', 'Receita Landing Page / Site')
     .eq('type', 'income')
     .is('subcategory', null)
+
+  if (fromDate) query = query.gte('date', fromDate)
+
+  const { data, error } = await query
 
   if (error || !data) return []
 

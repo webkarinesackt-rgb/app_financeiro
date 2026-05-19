@@ -38,23 +38,27 @@ const ACTIONS: ActionDef[] = [
   { label: 'Cliente recorrente / mensal', shortcut: '8', customCategory: 'Receita recorrente', subcategory: null, color: 'bg-teal-600 hover:bg-teal-700', emoji: '🔁' },
 ]
 
+const CURRENT_YEAR_START = `${new Date().getFullYear()}-01-01`
+
 export default function CategorizarPage() {
   const [clients, setClients] = useState<UncategorizedClient[]>([])
   const [index, setIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const [history, setHistory] = useState<HistoryEntry[]>([])
   const [processing, setProcessing] = useState(false)
+  const [fromDate, setFromDate] = useState<string>(CURRENT_YEAR_START)
 
   const fetchClients = useCallback(async () => {
     setLoading(true)
     try {
-      const list = await getUncategorizedLPClients()
+      const list = await getUncategorizedLPClients(fromDate || undefined)
       setClients(list)
       setIndex(0)
+      setHistory([])
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [fromDate])
 
   useEffect(() => { fetchClients() }, [fetchClients])
 
@@ -108,11 +112,26 @@ export default function CategorizarPage() {
 
   return (
     <div className="space-y-5 max-w-3xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-800">Categorizar em massa</h1>
-        <p className="text-slate-500 text-sm mt-0.5">
-          1 cliente por vez. Clica num botão (ou pressiona a tecla) pra categorizar todas as transações desse cliente.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Categorizar em massa</h1>
+          <p className="text-slate-500 text-sm mt-0.5">
+            1 cliente por vez. Clica num botão (ou pressiona a tecla) pra categorizar todas as transações desse cliente.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <label className="text-xs text-slate-500">Mostrar desde:</label>
+          <input
+            type="date"
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+            className="border border-slate-200 rounded-md px-2 py-1 text-xs"
+          />
+          <Button onClick={fetchClients} variant="outline" size="sm" className="h-8 text-xs gap-1">
+            Recarregar
+          </Button>
+        </div>
       </div>
 
       {/* Progress */}
