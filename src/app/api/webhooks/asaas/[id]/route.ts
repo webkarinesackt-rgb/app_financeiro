@@ -67,7 +67,7 @@ export async function POST(
   }
 
   // 6. Upsert idempotente. Usamos netValue (o que cai na conta após taxa do Asaas).
-  const netValue = p.netValue ?? p.value
+  const netValue = (p.netValue != null && p.netValue > 0) ? p.netValue : p.value
   const fee = p.value - netValue
   const txDate = p.paymentDate ?? p.clientPaymentDate ?? p.dateCreated
   const { error: upsertErr } = await admin
@@ -78,7 +78,10 @@ export async function POST(
         type: 'income',
         amount: netValue,
         description: buildDescription(customerName, p.description),
-        category: 'other',
+        // Categorização default: Asaas = serviço de Landing Page / Site.
+        // Subdivisão por tipo de projeto (subcategory) é feita manualmente em /transactions.
+        category: 'custom',
+        custom_category: 'Receita Landing Page / Site',
         date: txDate,
         account_id: integration.account_id,
         payment_method: mapBillingType(p.billingType),
