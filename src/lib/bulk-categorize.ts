@@ -39,7 +39,7 @@ export async function getUncategorizedExpenses(fromDate?: string): Promise<Uncat
   for (const t of data) {
     // Pra despesas (que vêm do cartão), o "nome" é o lojista — tipicamente
     // os primeiros tokens da descrição.
-    const tokens = t.description.split(/\s+/).filter((w) => w.length >= 3)
+    const tokens = (t.description as string).split(/\s+/).filter((w: string) => w.length >= 3)
     const key = tokens.slice(0, 2).join(' ') || t.description.slice(0, 30)
     const normKey = key.replace(/\d+$/, '').trim()  // remove números no final
     if (!normKey) continue
