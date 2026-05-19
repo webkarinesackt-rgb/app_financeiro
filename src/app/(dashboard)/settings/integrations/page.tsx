@@ -56,9 +56,17 @@ export default function IntegrationsPage() {
     setBusy(id)
     try {
       const r = await runBackfill(id)
-      toast.success(`Importadas ${r.imported} cobranças`, {
-        description: r.failed ? `${r.failed} falharam — ver console` : 'Tudo certo',
-      })
+      if (r.failed > 0 && r.imported === 0) {
+        toast.error(`Backfill falhou — ${r.failed} cobranças não importadas`, {
+          description: r.firstError ?? 'Erro desconhecido — ver logs Vercel',
+        })
+      } else if (r.failed > 0) {
+        toast.warning(`Importadas ${r.imported} cobranças`, {
+          description: `${r.failed} falharam: ${r.firstError ?? 'ver logs'}`,
+        })
+      } else {
+        toast.success(`Importadas ${r.imported} cobranças`)
+      }
       fetchData()
     } catch (e) { toast.error('Erro no backfill', { description: (e as Error).message }) }
     finally { setBusy(null) }

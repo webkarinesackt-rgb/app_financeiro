@@ -50,7 +50,7 @@ export async function toggleIntegration(id: string, active: boolean): Promise<vo
   if (!res.ok) throw new Error(await res.text())
 }
 
-export async function runBackfill(id: string): Promise<{ imported: number; failed: number }> {
+export async function runBackfill(id: string): Promise<{ imported: number; failed: number; firstError?: string | null }> {
   const res = await fetch(`/api/asaas/${id}/backfill`, { method: 'POST' })
   if (!res.ok) throw new Error(await res.text())
   return res.json()

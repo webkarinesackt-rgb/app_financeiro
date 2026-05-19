@@ -33,6 +33,7 @@ export async function POST(
 
   let imported = 0
   let failed = 0
+  let firstError: string | null = null
   const statuses: AsaasPaymentStatus[] = ['RECEIVED', 'CONFIRMED']
 
   for (const status of statuses) {
@@ -62,6 +63,7 @@ export async function POST(
         )
       if (error) {
         console.error('[backfill] upsert error:', error, p.id)
+        if (!firstError) firstError = `${error.code ?? ''} ${error.message}`.trim()
         failed++
       } else {
         imported++
@@ -74,7 +76,7 @@ export async function POST(
     .update({ last_sync_at: new Date().toISOString() })
     .eq('id', integration.id)
 
-  return NextResponse.json({ ok: true, imported, failed })
+  return NextResponse.json({ ok: true, imported, failed, firstError })
 }
 
 function mapBillingType(t: AsaasPayment['billingType']): string | null {
