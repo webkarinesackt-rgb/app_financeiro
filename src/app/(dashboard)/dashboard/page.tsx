@@ -14,10 +14,15 @@ import { TransactionForm } from '@/components/transactions/transaction-form'
 import { RecentTransactions } from '@/components/dashboard/recent-transactions'
 import { ExpenseChart } from '@/components/dashboard/expense-chart'
 import { AsaasForecast } from '@/components/dashboard/asaas-forecast'
-import { IncomeBySource } from '@/components/dashboard/income-by-source'
 import { OverdueList } from '@/components/dashboard/overdue-list'
 import { RemindersCard } from '@/components/dashboard/reminders-card'
-import { TrendingDown, TrendingUp, Plus, Wallet, CreditCard, ArrowRight, Eye, EyeOff } from 'lucide-react'
+import { ReceivedSection } from '@/components/dashboard/received-section'
+import { SectionHeader } from '@/components/dashboard/section-header'
+import { AwaitingSettlement } from '@/components/dashboard/awaiting-settlement'
+import { Calendar, AlertTriangle, ListChecks, Clock } from 'lucide-react'
+import { TrendingDown, TrendingUp, Plus, Wallet, CreditCard, Eye, EyeOff } from 'lucide-react'
+
+const MONTHS_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
 
 function getGreeting(): string {
   const h = new Date().getHours()
@@ -35,26 +40,32 @@ export default function DashboardPage() {
   const [accounts, setAccounts] = useState<AccountWithBalance[]>([])
   const [cards, setCards] = useState<CreditCardWithUsage[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [prevTransactions, setPrevTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
   const [showBalances, setShowBalances] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [formType, setFormType] = useState<'income' | 'expense'>('expense')
 
+  const prevMonth = month === 1 ? 12 : month - 1
+  const prevYear = month === 1 ? year - 1 : year
+
   const fetchData = useCallback(async () => {
     setLoading(true)
     const supabase = createClient()
-    const [{ data: { user } }, accs, crds, txs] = await Promise.all([
+    const [{ data: { user } }, accs, crds, txs, prevTxs] = await Promise.all([
       supabase.auth.getUser(),
       getAccountsWithBalances(),
       getCreditCardsWithUsage(month, year),
       getTransactions({ month, year }),
+      getTransactions({ month: prevMonth, year: prevYear }),
     ])
     setUserEmail(user?.email?.split('@')[0] ?? 'Usuário')
     setAccounts(accs)
     setCards(crds)
     setTransactions(txs)
+    setPrevTransactions(prevTxs)
     setLoading(false)
-  }, [month, year])
+  }, [month, year, prevMonth, prevYear])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -105,16 +116,10 @@ export default function DashboardPage() {
             </button>
           </div>
 
-          {/* Stats row */}
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            <div className="bg-emerald-50 rounded-xl px-3 py-2.5">
-              <p className="text-[11px] text-emerald-600 font-medium mb-0.5">Receitas</p>
-              <p className="text-base font-bold text-emerald-700 leading-tight">{fmt(totalIncome)}</p>
-            </div>
-            <div className="bg-red-50 rounded-xl px-3 py-2.5">
-              <p className="text-[11px] text-red-500 font-medium mb-0.5">Despesas</p>
-              <p className="text-base font-bold text-red-600 leading-tight">{fmt(totalExpenses)}</p>
-            </div>
+          {/* Stats row — só despesas (receitas vão pra ReceivedSection abaixo) */}
+          <div className="bg-red-50 rounded-xl px-3 py-2.5 mb-4">
+            <p className="text-[11px] text-red-500 font-medium mb-0.5">Despesas em {MONTHS_PT[month - 1]}</p>
+            <p className="text-base font-bold text-red-600 leading-tight">{fmt(totalExpenses)}</p>
           </div>
 
           {/* Quick actions */}
@@ -246,20 +251,41 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Asaas — entradas atuais por origem + previsão próximos meses */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <IncomeBySource transactions={transactions} accounts={accounts} />
+      {/* ═══ RECEBIDO ═══ */}
+      <ReceivedSection
+        transactions={transactions}
+        prevTransactions={prevTransactions}
+        accounts={accounts}
+        monthLabel={MONTHS_PT[month - 1]}
+        prevMonthLabel={MONTHS_PT[prevMonth - 1]}
+      />
+
+      {/* ═══ AGUARDANDO REPASSE (CONFIRMED) ═══ */}
+      <section>
+        <SectionHeader icon={<Clock />} title="Aguardando repasse" accent="blue" />
+        <AwaitingSettlement />
+      </section>
+
+      {/* ═══ A RECEBER ═══ */}
+      <section>
+        <SectionHeader icon={<Calendar />} title="A receber (Asaas)" accent="emerald" />
         <AsaasForecast />
-      </div>
+      </section>
 
-      {/* Pendências manuais — contas a pagar + clientes a cobrar */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <RemindersCard type="invoice_pending" />
-        <RemindersCard type="payment_due" />
-      </div>
+      {/* ═══ ATRASADO ═══ */}
+      <section>
+        <SectionHeader icon={<AlertTriangle />} title="Cobranças atrasadas" accent="amber" />
+        <OverdueList />
+      </section>
 
-      {/* Cobranças atrasadas (do Asaas) */}
-      <OverdueList />
+      {/* ═══ PENDÊNCIAS MANUAIS ═══ */}
+      <section>
+        <SectionHeader icon={<ListChecks />} title="Suas pendências" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <RemindersCard type="invoice_pending" />
+          <RemindersCard type="payment_due" />
+        </div>
+      </section>
 
       {/* Chart + recent transactions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

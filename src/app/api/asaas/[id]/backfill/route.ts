@@ -1,17 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { listPayments, paginate, type AsaasEnv, type AsaasPayment, type AsaasPaymentStatus } from '@/lib/asaas/client'
+import { listPayments, getCustomer, paginate, type AsaasEnv, type AsaasPayment, type AsaasPaymentStatus } from '@/lib/asaas/client'
+import { buildDescription } from '@/lib/asaas/description'
+
+// Vercel: backfill com customer-lookup pode passar de 10s — estende pro máximo.
+export const maxDuration = 60
 
 // Importa cobranças passadas (RECEIVED + CONFIRMED) da conta Asaas.
-// Chamado manualmente pela tela /settings/integrations.
+// UPSERT — re-rodar atualiza descrições com nome do cliente.
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id: integrationId } = await params
 
-  // Autenticação do usuário — só o owner da integração pode rodar backfill.
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
@@ -30,10 +33,27 @@ export async function POST(
 
   const admin = createAdminClient()
   const env = integration.environment as AsaasEnv
+  const apiKey = integration.api_key  // capturado p/ TS narrowing dentro do closure
 
   let imported = 0
   let failed = 0
   let firstError: string | null = null
+  // Cache de nomes de clientes (mesma instância da chamada — economiza ~95% das chamadas /customers)
+  const customerCache = new Map<string, string>()
+
+  async function nameOf(customerId: string): Promise<string> {
+    let name = customerCache.get(customerId)
+    if (name !== undefined) return name
+    try {
+      const c = await getCustomer(env, apiKey, customerId)
+      name = c.name ?? ''
+    } catch {
+      name = ''
+    }
+    customerCache.set(customerId, name)
+    return name
+  }
+
   const statuses: AsaasPaymentStatus[] = ['RECEIVED', 'CONFIRMED']
 
   for (const status of statuses) {
@@ -42,6 +62,10 @@ export async function POST(
     )
 
     for await (const p of iter) {
+      const customerName = await nameOf(p.customer)
+      // Asaas desconta taxa por método (PIX/boleto/cartão) — netValue é o líquido em conta.
+      const netValue = p.netValue ?? p.value
+      const fee = p.value - netValue
       const txDate = p.paymentDate ?? p.clientPaymentDate ?? p.dateCreated
       const { error } = await admin
         .from('transactions')
@@ -49,15 +73,15 @@ export async function POST(
           {
             user_id: integration.user_id,
             type: 'income',
-            amount: p.value,
-            description: p.description?.trim() || `Cobrança Asaas ${p.id}`,
+            amount: netValue,
+            description: buildDescription(customerName, p.description),
             category: 'other',
             date: txDate,
             account_id: integration.account_id,
             payment_method: mapBillingType(p.billingType),
             integration_id: integration.id,
             external_id: p.id,
-            notes: `Asaas ${p.billingType} • status ${p.status}`,
+            notes: `Asaas ${p.billingType} • ${p.status}${customerName ? ` • ${customerName}` : ''} • bruto R$ ${p.value.toFixed(2)} • taxa R$ ${fee.toFixed(2)}`,
           },
           { onConflict: 'integration_id,external_id' },
         )
@@ -76,7 +100,7 @@ export async function POST(
     .update({ last_sync_at: new Date().toISOString() })
     .eq('id', integration.id)
 
-  return NextResponse.json({ ok: true, imported, failed, firstError })
+  return NextResponse.json({ ok: true, imported, failed, firstError, uniqueCustomers: customerCache.size })
 }
 
 function mapBillingType(t: AsaasPayment['billingType']): string | null {

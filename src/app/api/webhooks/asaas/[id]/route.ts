@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import type { AsaasPayment } from '@/lib/asaas/client'
+import { getCustomer, type AsaasEnv, type AsaasPayment } from '@/lib/asaas/client'
+import { buildDescription } from '@/lib/asaas/description'
 
 // Eventos que disparam criação de transação (cobrança efetivamente paga).
 const INGEST_EVENTS = new Set(['PAYMENT_RECEIVED', 'PAYMENT_CONFIRMED'])
@@ -18,10 +19,10 @@ export async function POST(
 
   const admin = createAdminClient()
 
-  // 1. Carrega a integração — precisamos do webhook_token, account_id e user_id.
+  // 1. Carrega a integração — webhook_token p/ validar, api_key p/ buscar cliente.
   const { data: integration, error: intErr } = await admin
     .from('asaas_integrations')
-    .select('id, user_id, account_id, webhook_token, active')
+    .select('id, user_id, account_id, webhook_token, active, api_key, environment')
     .eq('id', integrationId)
     .single()
 
@@ -53,7 +54,18 @@ export async function POST(
 
   const p = body.payment
 
-  // 5. Upsert idempotente — chave única (integration_id, external_id).
+  // 5. Busca o nome do cliente pra descrição. Falha silenciosa se não rolar.
+  let customerName = ''
+  try {
+    const c = await getCustomer(integration.environment as AsaasEnv, integration.api_key, p.customer)
+    customerName = c.name ?? ''
+  } catch (e) {
+    console.warn('[asaas webhook] customer fetch failed:', e)
+  }
+
+  // 6. Upsert idempotente. Usamos netValue (o que cai na conta após taxa do Asaas).
+  const netValue = p.netValue ?? p.value
+  const fee = p.value - netValue
   const txDate = p.paymentDate ?? p.clientPaymentDate ?? p.dateCreated
   const { error: upsertErr } = await admin
     .from('transactions')
@@ -61,15 +73,15 @@ export async function POST(
       {
         user_id: integration.user_id,
         type: 'income',
-        amount: p.value,
-        description: p.description?.trim() || `Cobrança Asaas ${p.id}`,
+        amount: netValue,
+        description: buildDescription(customerName, p.description),
         category: 'other',
         date: txDate,
         account_id: integration.account_id,
         payment_method: mapBillingType(p.billingType),
         integration_id: integration.id,
         external_id: p.id,
-        notes: `Asaas ${p.billingType} • status ${p.status}`,
+        notes: `Asaas ${p.billingType} • ${p.status}${customerName ? ` • ${customerName}` : ''} • bruto R$ ${p.value.toFixed(2)} • taxa R$ ${fee.toFixed(2)}`,
       },
       { onConflict: 'integration_id,external_id' },
     )
