@@ -238,8 +238,22 @@ export default function ImportPage() {
   return (
     <div className="flex flex-col h-[calc(100vh-7rem)] md:h-[calc(100vh-3rem)] max-w-2xl mx-auto">
       <div className="mb-4 shrink-0">
-        <h1 className="text-2xl font-bold text-slate-800">Importar Extrato</h1>
-        <p className="text-slate-500 text-sm mt-0.5">Cole o texto do extrato e a IA identifica e categoriza automaticamente</p>
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-800">Importar Extrato ou Fatura</h1>
+            <p className="text-slate-500 text-sm mt-0.5">CSV do banco (gratuito) ou texto colado (usa IA)</p>
+          </div>
+          {messages.length > 1 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs h-8 shrink-0"
+              onClick={() => setMessages([messages[0]])}
+            >
+              Limpar e começar novo
+            </Button>
+          )}
+        </div>
 
         <div className="mt-3 flex flex-col sm:flex-row gap-2 sm:items-center">
           <div className="flex items-center gap-2 flex-1">
@@ -277,7 +291,15 @@ export default function ImportPage() {
 
         <div className="mt-2 flex items-start gap-1.5 text-[11px] text-slate-400">
           <Info className="h-3 w-3 mt-0.5 shrink-0" />
-          <span>Linhas que parecem repasse do Asaas (TED, descrição com &ldquo;asaas&rdquo;) vêm <strong>desmarcadas</strong> por padrão para evitar duplicação.</span>
+          <div className="space-y-0.5">
+            <div>
+              <strong>Extrato de conta</strong> (movimentações da Inter, Asaas, etc) → escolha uma <strong>conta</strong>.{' '}
+              <strong>Fatura de cartão</strong> (compras do cartão) → escolha um <strong>cartão</strong>.
+            </div>
+            <div>
+              Linhas com &ldquo;asaas&rdquo; (repasse) ou &ldquo;pagamento on line&rdquo; (pagto de fatura) vêm <strong>desmarcadas</strong> automaticamente.
+            </div>
+          </div>
         </div>
       </div>
 

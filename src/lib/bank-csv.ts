@@ -134,15 +134,32 @@ function inferPaymentMethod(desc: string): PaymentMethod {
   return 'other'
 }
 
-// Categorização extra pros itens típicos de fatura de cartão
-function inferCardCategory(desc: string): Category {
+// Categorização extra pros itens típicos de fatura de cartão.
+// Usa primeiro a Categoria que o próprio banco devolveu (Inter já classifica),
+// depois cai pra heurística de palavras-chave na descrição.
+function inferCardCategory(desc: string, bankCategoryRaw?: string): Category {
   const d = norm(desc)
-  if (/\b(facebk|facebook|google ads|ads )/.test(d)) return 'subscriptions'  // ad spend → assinaturas
-  if (/\b(clickup|notion|figma|adobe|nuvemhost|reportei|kiwify|sendflow|paypal|manychat|ui8)/.test(d)) return 'subscriptions'
+
+  // 1. Heurística por nome do lojista (mais confiável que a categoria do banco)
+  if (/\b(facebk|facebook|google ads|ads )/.test(d)) return 'subscriptions'
+  if (/\b(clickup|notion|figma|adobe|nuvemhost|reportei|kiwify|sendflow|paypal|manychat|ui8|freepik)/.test(d)) return 'subscriptions'
   if (/\b(claude|openai|chatgpt|anthropic)/.test(d)) return 'subscriptions'
-  if (/\bapple\s?com\s?bill|applecombill/.test(d)) return 'subscriptions'
-  if (/\biof/.test(d)) return 'taxes'
-  if (/(encargos|juros|multa|rotativo)/.test(d)) return 'other'  // financeiros
+  if (/applecombill|apple\s?com\s?bill/.test(d)) return 'subscriptions'
+  if (/\biof|iof internacional|iof db pf|das mei|inss/.test(d)) return 'taxes'
+  if (/(encargos|juros|multa|rotativo|saldo financiado)/.test(d)) return 'other'
+  if (/\b(ifood|uber eats|rappi|mercado mercadolivre|restaurante|padaria)/.test(d)) return 'food'
+  if (/\b(uber|99|taxi|combustivel|posto)/.test(d)) return 'transport'
+  if (/\b(farmacia|drogaria|hospital|consulta|em servicos)/.test(d)) return 'health'
+
+  // 2. Categoria fornecida pelo banco (Inter usa: SERVICOS, COMPRAS, OUTROS, ENTRETENIMENTO, SAUDE)
+  if (bankCategoryRaw) {
+    const c = norm(bankCategoryRaw)
+    if (c === 'saude') return 'health'
+    if (c === 'entretenimento') return 'entertainment'
+    if (c === 'servicos') return 'subscriptions'  // serviços geralmente recorrentes em cartão
+    if (c === 'compras') return 'other'
+  }
+
   return 'other'
 }
 
@@ -192,13 +209,16 @@ export function parseBankCsv(text: string): CsvParseResult {
              warnings: ['Não encontrei o cabeçalho do extrato (linha com "Data" e "Valor"). Verifique o arquivo.'], format: 'unknown' }
   }
 
-  // Mapeia índices de colunas
+  // Mapeia índices de colunas — "lancamento" tem prioridade sobre "descricao"
+  // (em faturas Inter, "Descricao" é coluna-resumo vazia e "Lançamento" tem o lojista)
   const headers = parseCsvLine(lines[headerIdx], delimiter).map(norm)
+  const lancIdx = headers.findIndex((h) => /^lancamento$/.test(h))
+  const descGenericIdx = headers.findIndex((h) =>
+    /^descric|^descricao|historico|memo|detalhes/.test(h)
+  )
   const idx = {
     date: headers.findIndex((h) => /\bdata\b/.test(h)),
-    description: headers.findIndex((h) =>
-      /lancamento|descric|descricao|historico|memo|detalhes/.test(h)
-    ),
+    description: lancIdx !== -1 ? lancIdx : descGenericIdx,
     history: headers.findIndex((h) => /historic/.test(h)),
     amount: headers.findIndex((h) => /\bvalor\b/.test(h)),
     balance: headers.findIndex((h) => /saldo/.test(h)),
@@ -258,8 +278,9 @@ export function parseBankCsv(text: string): CsvParseResult {
 
     const isPayment = format === 'card_invoice' && isCardPaymentLine(description)
 
+    const bankCategoryRaw = idx.categoria !== -1 ? (row[idx.categoria] ?? '').trim() : ''
     const category = format === 'card_invoice'
-      ? inferCardCategory(description)
+      ? inferCardCategory(description, bankCategoryRaw)
       : inferCategory(description, type)
 
     transactions.push({
