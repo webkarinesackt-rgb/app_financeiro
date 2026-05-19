@@ -232,6 +232,7 @@ export const SUBCATEGORIES_BY_CUSTOM_CATEGORY: Record<string, string[]> = {
     'Programação',
     'Site institucional',
     'Alterações',
+    'Anúncios',
   ],
 }
 

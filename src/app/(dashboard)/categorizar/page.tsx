@@ -33,8 +33,9 @@ const ACTIONS: ActionDef[] = [
   { label: 'Site institucional', shortcut: '3', customCategory: 'Receita Landing Page / Site', subcategory: 'Site institucional', color: 'bg-purple-600 hover:bg-purple-700', emoji: '🏢' },
   { label: 'Programação', shortcut: '4', customCategory: 'Receita Landing Page / Site', subcategory: 'Programação', color: 'bg-indigo-600 hover:bg-indigo-700', emoji: '💻' },
   { label: 'Alterações', shortcut: '5', customCategory: 'Receita Landing Page / Site', subcategory: 'Alterações', color: 'bg-amber-600 hover:bg-amber-700', emoji: '✏️' },
-  { label: 'Receita curso (sai do LP)', shortcut: '6', customCategory: 'Receita curso', subcategory: null, color: 'bg-pink-600 hover:bg-pink-700', emoji: '🎓' },
-  { label: 'Cliente recorrente / mensal', shortcut: '7', customCategory: 'Receita recorrente', subcategory: null, color: 'bg-teal-600 hover:bg-teal-700', emoji: '🔁' },
+  { label: 'Anúncios / Tráfego pago', shortcut: '6', customCategory: 'Receita Landing Page / Site', subcategory: 'Anúncios', color: 'bg-rose-600 hover:bg-rose-700', emoji: '📢' },
+  { label: 'Receita curso (sai do LP)', shortcut: '7', customCategory: 'Receita curso', subcategory: null, color: 'bg-pink-600 hover:bg-pink-700', emoji: '🎓' },
+  { label: 'Cliente recorrente / mensal', shortcut: '8', customCategory: 'Receita recorrente', subcategory: null, color: 'bg-teal-600 hover:bg-teal-700', emoji: '🔁' },
 ]
 
 export default function CategorizarPage() {
@@ -225,8 +226,9 @@ export default function CategorizarPage() {
               <div><kbd className="font-mono">3</kbd> Site</div>
               <div><kbd className="font-mono">4</kbd> Programação</div>
               <div><kbd className="font-mono">5</kbd> Alterações</div>
-              <div><kbd className="font-mono">6</kbd> Curso</div>
-              <div><kbd className="font-mono">7</kbd> Recorrente</div>
+              <div><kbd className="font-mono">6</kbd> Anúncios</div>
+              <div><kbd className="font-mono">7</kbd> Curso</div>
+              <div><kbd className="font-mono">8</kbd> Recorrente</div>
               <div className="col-span-full"><kbd className="font-mono">Space</kbd> ou <kbd className="font-mono">→</kbd> Pular</div>
             </div>
           </CardContent>
