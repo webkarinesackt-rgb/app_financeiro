@@ -34,6 +34,7 @@ const ACTIONS: ActionDef[] = [
   { label: 'Programação', shortcut: '4', customCategory: 'Receita Landing Page / Site', subcategory: 'Programação', color: 'bg-indigo-600 hover:bg-indigo-700', emoji: '💻' },
   { label: 'Alterações', shortcut: '5', customCategory: 'Receita Landing Page / Site', subcategory: 'Alterações', color: 'bg-amber-600 hover:bg-amber-700', emoji: '✏️' },
   { label: 'Receita curso (sai do LP)', shortcut: '6', customCategory: 'Receita curso', subcategory: null, color: 'bg-pink-600 hover:bg-pink-700', emoji: '🎓' },
+  { label: 'Cliente recorrente / mensal', shortcut: '7', customCategory: 'Receita recorrente', subcategory: null, color: 'bg-teal-600 hover:bg-teal-700', emoji: '🔁' },
 ]
 
 export default function CategorizarPage() {
@@ -225,6 +226,7 @@ export default function CategorizarPage() {
               <div><kbd className="font-mono">4</kbd> Programação</div>
               <div><kbd className="font-mono">5</kbd> Alterações</div>
               <div><kbd className="font-mono">6</kbd> Curso</div>
+              <div><kbd className="font-mono">7</kbd> Recorrente</div>
               <div className="col-span-full"><kbd className="font-mono">Space</kbd> ou <kbd className="font-mono">→</kbd> Pular</div>
             </div>
           </CardContent>
