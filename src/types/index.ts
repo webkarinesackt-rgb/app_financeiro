@@ -52,12 +52,14 @@ export interface TransactionFormData {
 // ─── Account Types ────────────────────────────────────────────────────────────
 
 export type AccountType = 'checking' | 'savings' | 'cash' | 'investment' | 'other'
+export type AccountKind = 'operational' | 'reserve'
 
 export interface Account {
   id: string
   user_id: string
   name: string
   type: AccountType
+  kind: AccountKind
   bank: string | null
   color: string
   initial_balance: number

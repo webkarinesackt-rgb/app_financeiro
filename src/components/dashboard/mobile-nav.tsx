@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, ArrowLeftRight, BarChart3,
-  Settings, TrendingUp, LogOut, Plus, Handshake,
+  Settings, TrendingUp, LogOut, Plus, Handshake, PiggyBank,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useState } from 'react'
@@ -16,7 +16,7 @@ const navItems = [
   { href: '/dashboard',  label: 'Início',       icon: LayoutDashboard },
   { href: '/transactions', label: 'Lançamentos', icon: ArrowLeftRight },
   { href: '/closings',   label: 'Fechamentos',   icon: Handshake },
-  { href: '/reports',    label: 'Relatórios',    icon: BarChart3 },
+  { href: '/reservas',   label: 'Reservas',      icon: PiggyBank },
 ]
 
 export function MobileNav() {

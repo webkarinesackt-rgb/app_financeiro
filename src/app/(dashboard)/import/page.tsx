@@ -1,15 +1,24 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, Send, Bot, User, CheckSquare, Square, TrendingUp, TrendingDown, CheckCheck, Trash2 } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Loader2, Send, Bot, User, CheckSquare, Square, TrendingUp, TrendingDown, CheckCheck, Trash2, Wallet, Info } from 'lucide-react'
 import { toast } from 'sonner'
 import { createTransaction } from '@/lib/transactions'
+import { getAccounts } from '@/lib/accounts'
 import { formatCurrency } from '@/lib/format'
 import { CATEGORY_LABELS, PAYMENT_METHOD_LABELS } from '@/types'
-import type { Category, PaymentMethod } from '@/types'
+import type { Account, Category, PaymentMethod } from '@/types'
+
+// Heurística: descrições que sugerem repasse Asaas → conta bancária.
+// Quando detectado, a linha é desmarcada por default (já vem via integração Asaas).
+function isAsaasTransfer(description: string): boolean {
+  const d = description.toLowerCase()
+  return d.includes('asaas') || /\bted\b.*asaas\b/i.test(description)
+}
 
 interface ParsedTransaction {
   type: 'income' | 'expense'
@@ -38,6 +47,15 @@ export default function ImportPage() {
   const [loading, setLoading] = useState(false)
   const [importing, setImporting] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const [accounts, setAccounts] = useState<Account[]>([])
+  const [accountId, setAccountId] = useState<string>('')
+
+  useEffect(() => {
+    getAccounts().then((accs) => {
+      setAccounts(accs)
+      if (accs.length > 0 && !accountId) setAccountId(accs[0].id)
+    }).catch(() => {})
+  }, [accountId])
 
   async function handleSend() {
     if (!input.trim() || loading) return
@@ -63,7 +81,9 @@ export default function ImportPage() {
 
       const txs: ParsedTransaction[] = (json.transactions ?? []).map((t: ParsedTransaction) => ({
         ...t,
-        selected: true,
+        // Desmarca automaticamente linhas que parecem repasse do Asaas
+        // (já foram contabilizadas pela integração Asaas — evitar duplicar).
+        selected: !isAsaasTransfer(t.description),
       }))
 
       if (txs.length === 0) {
@@ -128,7 +148,7 @@ export default function ImportPage() {
           category: tx.category,
           custom_category: null,
           payment_method: tx.payment_method,
-          account_id: null,
+          account_id: accountId || null,
           credit_card_id: null,
           installment_total: null,
           notes: null,
@@ -157,6 +177,32 @@ export default function ImportPage() {
       <div className="mb-4 shrink-0">
         <h1 className="text-2xl font-bold text-slate-800">Importar Extrato</h1>
         <p className="text-slate-500 text-sm mt-0.5">Cole o texto do extrato e a IA identifica e categoriza automaticamente</p>
+
+        <div className="mt-3 flex flex-col sm:flex-row gap-2 sm:items-center">
+          <div className="flex items-center gap-2 flex-1">
+            <Wallet className="h-4 w-4 text-slate-400 shrink-0" />
+            <span className="text-xs text-slate-500 shrink-0">Importar para:</span>
+            {accounts.length === 0 ? (
+              <span className="text-xs text-amber-600">Nenhuma conta cadastrada — crie uma em Configurações</span>
+            ) : (
+              <Select value={accountId} onValueChange={(v) => { if (v) setAccountId(v) }}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                <SelectContent>
+                  {accounts.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.name}{a.kind === 'reserve' ? ' (reserva)' : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-2 flex items-start gap-1.5 text-[11px] text-slate-400">
+          <Info className="h-3 w-3 mt-0.5 shrink-0" />
+          <span>Linhas que parecem repasse do Asaas (TED, descrição com &ldquo;asaas&rdquo;) vêm <strong>desmarcadas</strong> por padrão para evitar duplicação.</span>
+        </div>
       </div>
 
       {/* Messages */}

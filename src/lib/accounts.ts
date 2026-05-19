@@ -29,6 +29,16 @@ export async function getAccountsWithBalances(): Promise<AccountWithBalance[]> {
   })
 }
 
+export async function getReserveAccountsWithBalances(): Promise<AccountWithBalance[]> {
+  const all = await getAccountsWithBalances()
+  return all.filter((a) => a.kind === 'reserve')
+}
+
+export async function getOperationalAccountsWithBalances(): Promise<AccountWithBalance[]> {
+  const all = await getAccountsWithBalances()
+  return all.filter((a) => a.kind !== 'reserve')
+}
+
 export async function createAccount(data: AccountInput): Promise<Account> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()

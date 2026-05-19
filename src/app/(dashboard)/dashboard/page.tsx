@@ -71,7 +71,10 @@ export default function DashboardPage() {
 
   const totalIncome = transactions.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0)
   const totalExpenses = transactions.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
-  const saldoGeral = accounts.filter((a) => a.include_in_total).reduce((s, a) => s + a.currentBalance, 0)
+  const operationalAccounts = accounts.filter((a) => a.kind !== 'reserve')
+  const reserveAccounts = accounts.filter((a) => a.kind === 'reserve')
+  const saldoGeral = operationalAccounts.filter((a) => a.include_in_total).reduce((s, a) => s + a.currentBalance, 0)
+  const totalReservas = reserveAccounts.reduce((s, a) => s + a.currentBalance, 0)
   const totalFaturas = cards.reduce((s, c) => s + c.currentInvoice, 0)
 
   // Category data for chart
@@ -102,10 +105,10 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-5 max-w-5xl">
-      {/* Greeting + month summary + quick access */}
+      {/* Greeting */}
       <Card className="border border-slate-100 shadow-sm">
         <CardContent className="pt-4 pb-4">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between">
             <div>
               <p className="text-slate-500 text-sm">{getGreeting()},</p>
               <h1 className="text-lg font-bold text-slate-800 capitalize leading-tight">{userEmail}!</h1>
@@ -115,14 +118,58 @@ export default function DashboardPage() {
               {showBalances ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
             </button>
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Stats row — só despesas (receitas vão pra ReceivedSection abaixo) */}
+      {/* ═══ RECEBIDO ═══ */}
+      <ReceivedSection
+        transactions={transactions}
+        prevTransactions={prevTransactions}
+        accounts={accounts}
+        monthLabel={MONTHS_PT[month - 1]}
+        prevMonthLabel={MONTHS_PT[prevMonth - 1]}
+      />
+
+      {/* ═══ AGUARDANDO REPASSE (CONFIRMED) ═══ */}
+      <section>
+        <SectionHeader icon={<Clock />} title="Aguardando repasse" accent="blue" />
+        <AwaitingSettlement />
+      </section>
+
+      {/* ═══ A RECEBER ═══ */}
+      <section>
+        <SectionHeader icon={<Calendar />} title="A receber (Asaas)" accent="emerald" />
+        <AsaasForecast />
+      </section>
+
+      {/* ═══ ATRASADO ═══ */}
+      <section>
+        <SectionHeader icon={<AlertTriangle />} title="Cobranças atrasadas" accent="amber" />
+        <OverdueList />
+      </section>
+
+      {/* ═══ PENDÊNCIAS MANUAIS ═══ */}
+      <section>
+        <SectionHeader icon={<ListChecks />} title="Suas pendências" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <RemindersCard type="invoice_pending" />
+          <RemindersCard type="payment_due" />
+        </div>
+      </section>
+
+      {/* Chart + recent transactions */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <ExpenseChart data={categoryData} />
+        <RecentTransactions transactions={transactions} />
+      </div>
+
+      {/* ═══ DESPESAS DO MÊS + QUICK ACTIONS (movido para o final) ═══ */}
+      <Card className="border border-slate-100 shadow-sm">
+        <CardContent className="pt-4 pb-4">
           <div className="bg-red-50 rounded-xl px-3 py-2.5 mb-4">
             <p className="text-[11px] text-red-500 font-medium mb-0.5">Despesas em {MONTHS_PT[month - 1]}</p>
             <p className="text-base font-bold text-red-600 leading-tight">{fmt(totalExpenses)}</p>
           </div>
-
-          {/* Quick actions */}
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => openForm('expense')}
@@ -142,9 +189,9 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Saldo geral + Faturas */}
+      {/* ═══ SALDO GERAL + FATURAS (movido para o final) ═══ */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Contas */}
+        {/* Contas operacionais */}
         <Card className="border border-slate-100 shadow-sm">
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-1">
@@ -161,14 +208,14 @@ export default function DashboardPage() {
             <h3 className="text-sm font-semibold text-slate-700 mb-3">Minhas contas</h3>
             {loading ? (
               <div className="space-y-2">{[1,2].map(i => <div key={i} className="h-10 bg-slate-100 rounded-lg animate-pulse" />)}</div>
-            ) : accounts.length === 0 ? (
+            ) : operationalAccounts.length === 0 ? (
               <div className="flex flex-col items-center py-4 gap-2">
                 <Wallet className="h-8 w-8 text-slate-300" />
                 <p className="text-sm text-slate-400">Adicione sua primeira conta</p>
               </div>
             ) : (
               <div className="space-y-2">
-                {accounts.map((acc) => (
+                {operationalAccounts.map((acc) => (
                   <div key={acc.id} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
                     <div className="flex items-center gap-2">
                       <div className="h-8 w-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
@@ -192,6 +239,26 @@ export default function DashboardPage() {
                 Gerenciar contas
               </Button>
             </Link>
+
+            {reserveAccounts.length > 0 && (
+              <div className="mt-5 pt-4 border-t border-slate-100">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-slate-700">Reservas</h3>
+                  <Link href="/reservas" className="text-xs text-emerald-600 hover:text-emerald-700 font-medium">
+                    Ver tudo →
+                  </Link>
+                </div>
+                <p className="text-xl font-bold text-slate-800 mb-3">{fmt(totalReservas)}</p>
+                <div className="space-y-1.5">
+                  {reserveAccounts.slice(0, 3).map((acc) => (
+                    <div key={acc.id} className="flex items-center justify-between text-xs">
+                      <span className="text-slate-500 truncate">{acc.name}</span>
+                      <span className="font-semibold text-slate-700 whitespace-nowrap">{fmt(acc.currentBalance)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -249,48 +316,6 @@ export default function DashboardPage() {
             </Link>
           </CardContent>
         </Card>
-      </div>
-
-      {/* ═══ RECEBIDO ═══ */}
-      <ReceivedSection
-        transactions={transactions}
-        prevTransactions={prevTransactions}
-        accounts={accounts}
-        monthLabel={MONTHS_PT[month - 1]}
-        prevMonthLabel={MONTHS_PT[prevMonth - 1]}
-      />
-
-      {/* ═══ AGUARDANDO REPASSE (CONFIRMED) ═══ */}
-      <section>
-        <SectionHeader icon={<Clock />} title="Aguardando repasse" accent="blue" />
-        <AwaitingSettlement />
-      </section>
-
-      {/* ═══ A RECEBER ═══ */}
-      <section>
-        <SectionHeader icon={<Calendar />} title="A receber (Asaas)" accent="emerald" />
-        <AsaasForecast />
-      </section>
-
-      {/* ═══ ATRASADO ═══ */}
-      <section>
-        <SectionHeader icon={<AlertTriangle />} title="Cobranças atrasadas" accent="amber" />
-        <OverdueList />
-      </section>
-
-      {/* ═══ PENDÊNCIAS MANUAIS ═══ */}
-      <section>
-        <SectionHeader icon={<ListChecks />} title="Suas pendências" />
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <RemindersCard type="invoice_pending" />
-          <RemindersCard type="payment_due" />
-        </div>
-      </section>
-
-      {/* Chart + recent transactions */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ExpenseChart data={categoryData} />
-        <RecentTransactions transactions={transactions} />
       </div>
 
       {/* Quick-add via Link */}

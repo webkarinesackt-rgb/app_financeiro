@@ -10,13 +10,14 @@ import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { createAccount, updateAccount } from '@/lib/accounts'
 import { parseBRLAmount } from '@/lib/format'
-import { ACCOUNT_TYPE_LABELS, BANKS, type Account, type AccountType } from '@/types'
+import { ACCOUNT_TYPE_LABELS, BANKS, type Account, type AccountKind, type AccountType } from '@/types'
 
 interface AccountFormProps {
   open: boolean
   onClose: () => void
   onSuccess: () => void
   account?: Account
+  defaultKind?: AccountKind
 }
 
 const ACCOUNT_COLORS = [
@@ -24,11 +25,12 @@ const ACCOUNT_COLORS = [
   '#06b6d4', '#f97316', '#6366f1', '#14b8a6', '#84cc16',
 ]
 
-export function AccountForm({ open, onClose, onSuccess, account }: AccountFormProps) {
+export function AccountForm({ open, onClose, onSuccess, account, defaultKind }: AccountFormProps) {
   const isEditing = !!account
   const [loading, setLoading] = useState(false)
   const [name, setName] = useState(account?.name ?? '')
   const [type, setType] = useState<AccountType>(account?.type ?? 'checking')
+  const [kind, setKind] = useState<AccountKind>(account?.kind ?? defaultKind ?? 'operational')
   const [bank, setBank] = useState(account?.bank ?? '')
   const [color, setColor] = useState(account?.color ?? '#10b981')
   const [initialBalance, setInitialBalance] = useState(account ? String(account.initial_balance) : '0')
@@ -41,10 +43,12 @@ export function AccountForm({ open, onClose, onSuccess, account }: AccountFormPr
       const data = {
         name,
         type,
+        kind,
         bank: bank || null,
         color,
         initial_balance: parseBRLAmount(initialBalance) || 0,
-        include_in_total: includeInTotal,
+        // Reservas nunca entram no Saldo Geral
+        include_in_total: kind === 'reserve' ? false : includeInTotal,
       }
       if (isEditing) {
         await updateAccount(account.id, data)
@@ -125,13 +129,28 @@ export function AccountForm({ open, onClose, onSuccess, account }: AccountFormPr
             </div>
           </div>
 
-          <button type="button" onClick={() => setIncludeInTotal(!includeInTotal)}
-            className="flex items-center gap-3 w-full">
-            <div className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors ${includeInTotal ? 'bg-emerald-500' : 'bg-slate-200'}`}>
-              <span className={`inline-block h-4 w-4 translate-y-0.5 rounded-full bg-white shadow transition-transform ${includeInTotal ? 'translate-x-4' : 'translate-x-0.5'}`} />
-            </div>
-            <span className="text-sm text-slate-700">Incluir no Saldo Geral</span>
-          </button>
+          <div className="rounded-lg border border-slate-200 p-3 space-y-2.5">
+            <button type="button" onClick={() => setKind(kind === 'reserve' ? 'operational' : 'reserve')}
+              className="flex items-center gap-3 w-full">
+              <div className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors ${kind === 'reserve' ? 'bg-blue-500' : 'bg-slate-200'}`}>
+                <span className={`inline-block h-4 w-4 translate-y-0.5 rounded-full bg-white shadow transition-transform ${kind === 'reserve' ? 'translate-x-4' : 'translate-x-0.5'}`} />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-sm text-slate-700">É uma reserva / poupança?</p>
+                <p className="text-xs text-slate-400">Reservas aparecem em /reservas, separadas do dia-a-dia.</p>
+              </div>
+            </button>
+
+            {kind !== 'reserve' && (
+              <button type="button" onClick={() => setIncludeInTotal(!includeInTotal)}
+                className="flex items-center gap-3 w-full pt-2 border-t border-slate-100">
+                <div className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors ${includeInTotal ? 'bg-emerald-500' : 'bg-slate-200'}`}>
+                  <span className={`inline-block h-4 w-4 translate-y-0.5 rounded-full bg-white shadow transition-transform ${includeInTotal ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                </div>
+                <span className="text-sm text-slate-700">Incluir no Saldo Geral</span>
+              </button>
+            )}
+          </div>
 
           <DialogFooter className="gap-2">
             <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
