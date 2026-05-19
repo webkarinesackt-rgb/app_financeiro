@@ -111,6 +111,19 @@ export async function getCustomer(
   return asaasFetch(env, apiKey, `/customers/${id}`)
 }
 
+// Lista todos os clientes paginadamente (usado pra pré-popular o cache de nomes
+// no backfill — muito mais rápido que buscar 1-a-1 por id).
+export async function listCustomers(
+  env: AsaasEnv,
+  apiKey: string,
+  params: { limit?: number; offset?: number } = {},
+): Promise<AsaasListResponse<AsaasCustomer>> {
+  const qs = new URLSearchParams()
+  qs.set('limit', String(params.limit ?? 100))
+  qs.set('offset', String(params.offset ?? 0))
+  return asaasFetch(env, apiKey, `/customers?${qs.toString()}`)
+}
+
 // Iterador que paginação automaticamente, retornando todas as páginas.
 export async function* paginate<T>(
   fetcher: (offset: number) => Promise<AsaasListResponse<T>>,

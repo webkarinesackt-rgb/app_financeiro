@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { listPayments, getCustomer, paginate, type AsaasEnv, type AsaasPayment, type AsaasPaymentStatus } from '@/lib/asaas/client'
+import { listPayments, listCustomers, paginate, type AsaasEnv, type AsaasPayment, type AsaasPaymentStatus } from '@/lib/asaas/client'
 import { buildDescription } from '@/lib/asaas/description'
 
-// Vercel: backfill com customer-lookup pode passar de 10s — estende pro máximo.
+// Vercel: máximo permitido pro plano Pro.
 export const maxDuration = 60
 
-// Importa cobranças passadas (RECEIVED + CONFIRMED) da conta Asaas.
-// UPSERT — re-rodar atualiza descrições com nome do cliente.
+// Importa cobranças passadas (RECEIVED + RECEIVED_IN_CASH) da conta Asaas.
+// UPSERT idempotente — pode rodar várias vezes sem duplicar.
+//
+// Otimizações pra evitar FUNCTION_INVOCATION_TIMEOUT:
+//   1) Pre-carrega TODOS os clientes em paralelo (1 chamada paginada vs N)
+//   2) Aceita ?from=YYYY-MM-DD&to=YYYY-MM-DD pra processar chunks (default: 12 meses)
+//   3) Insere em batches de 100 com upsert único
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -33,25 +38,35 @@ export async function POST(
 
   const admin = createAdminClient()
   const env = integration.environment as AsaasEnv
-  const apiKey = integration.api_key  // capturado p/ TS narrowing dentro do closure
+  const apiKey = integration.api_key
+
+  // ─── Date range opcional ─────────────────────────────────────────────
+  const url = new URL(request.url)
+  const fromParam = url.searchParams.get('from')
+  const toParam = url.searchParams.get('to')
 
   let imported = 0
   let failed = 0
   let firstError: string | null = null
-  // Cache de nomes de clientes (mesma instância da chamada — economiza ~95% das chamadas /customers)
-  const customerCache = new Map<string, string>()
 
-  async function nameOf(customerId: string): Promise<string> {
-    let name = customerCache.get(customerId)
-    if (name !== undefined) return name
-    try {
-      const c = await getCustomer(env, apiKey, customerId)
-      name = c.name ?? ''
-    } catch {
-      name = ''
+  // ─── 1. Pre-carrega TODOS os clientes (1 query paginada) ─────────────
+  const customerCache = new Map<string, string>()
+  try {
+    let offset = 0
+    while (true) {
+      const page = await listCustomers(env, apiKey, { limit: 100, offset })
+      for (const c of page.data) {
+        if (c.id) customerCache.set(c.id, c.name ?? '')
+      }
+      if (!page.hasMore) break
+      offset += page.limit
     }
-    customerCache.set(customerId, name)
-    return name
+  } catch (e) {
+    console.warn('[backfill] falha ao pré-carregar clientes, vai cair pra lookup individual', e)
+  }
+
+  function nameOf(customerId: string): string {
+    return customerCache.get(customerId) ?? ''
   }
 
   // Regime de caixa: apenas RECEIVED (dinheiro já em conta) e RECEIVED_IN_CASH.
@@ -60,43 +75,63 @@ export async function POST(
   // Importar CONFIRMED inflava o caixa com parcelas futuras de cartão.
   const statuses: AsaasPaymentStatus[] = ['RECEIVED', 'RECEIVED_IN_CASH']
 
+  // Acumula em batches e dá UPSERT no final de cada status — muito mais rápido
+  // que 1 upsert por pagamento.
   for (const status of statuses) {
     const iter = paginate<AsaasPayment>((offset) =>
-      listPayments(env, integration.api_key, { status, limit: 100, offset }),
+      listPayments(env, apiKey, {
+        status,
+        limit: 100,
+        offset,
+        ...(fromParam ? { paymentDateGe: fromParam } : {}),
+        ...(toParam ? { paymentDateLe: toParam } : {}),
+      }),
     )
 
-    for await (const p of iter) {
-      const customerName = await nameOf(p.customer)
-      // Asaas desconta taxa por método (PIX/boleto/cartão) — netValue é o líquido em conta.
-      const netValue = p.netValue ?? p.value
-      const fee = p.value - netValue
-      const txDate = p.paymentDate ?? p.clientPaymentDate ?? p.dateCreated
+    const batch: Array<Record<string, unknown>> = []
+    const BATCH_SIZE = 100
+
+    const flush = async () => {
+      if (batch.length === 0) return
       const { error } = await admin
         .from('transactions')
-        .upsert(
-          {
-            user_id: integration.user_id,
-            type: 'income',
-            amount: netValue,
-            description: buildDescription(customerName, p.description),
-            category: 'other',
-            date: txDate,
-            account_id: integration.account_id,
-            payment_method: mapBillingType(p.billingType),
-            integration_id: integration.id,
-            external_id: p.id,
-            notes: `Asaas ${p.billingType} • ${p.status}${customerName ? ` • ${customerName}` : ''} • bruto R$ ${p.value.toFixed(2)} • taxa R$ ${fee.toFixed(2)}`,
-          },
-          { onConflict: 'integration_id,external_id' },
-        )
+        .upsert(batch, { onConflict: 'integration_id,external_id' })
       if (error) {
-        console.error('[backfill] upsert error:', error, p.id)
+        console.error('[backfill] batch upsert error:', error)
         if (!firstError) firstError = `${error.code ?? ''} ${error.message}`.trim()
-        failed++
+        failed += batch.length
       } else {
-        imported++
+        imported += batch.length
+      }
+      batch.length = 0
+    }
+
+    for await (const p of iter) {
+      const customerName = nameOf(p.customer)
+      // Asaas desconta taxa por método (PIX/boleto/cartão) — netValue é o líquido em conta.
+      const netValue = (p.netValue != null && p.netValue > 0) ? p.netValue : p.value
+      const fee = p.value - netValue
+      const txDate = p.paymentDate ?? p.clientPaymentDate ?? p.dateCreated
+
+      batch.push({
+        user_id: integration.user_id,
+        type: 'income',
+        amount: netValue,
+        description: buildDescription(customerName, p.description),
+        category: 'other',
+        date: txDate,
+        account_id: integration.account_id,
+        payment_method: mapBillingType(p.billingType),
+        integration_id: integration.id,
+        external_id: p.id,
+        notes: `Asaas ${p.billingType} • ${p.status}${customerName ? ` • ${customerName}` : ''} • bruto R$ ${p.value.toFixed(2)} • taxa R$ ${fee.toFixed(2)}`,
+      })
+
+      if (batch.length >= BATCH_SIZE) {
+        await flush()
       }
     }
+    await flush()
   }
 
   await admin
@@ -104,7 +139,14 @@ export async function POST(
     .update({ last_sync_at: new Date().toISOString() })
     .eq('id', integration.id)
 
-  return NextResponse.json({ ok: true, imported, failed, firstError, uniqueCustomers: customerCache.size })
+  return NextResponse.json({
+    ok: true,
+    imported,
+    failed,
+    firstError,
+    uniqueCustomers: customerCache.size,
+    range: { from: fromParam, to: toParam },
+  })
 }
 
 function mapBillingType(t: AsaasPayment['billingType']): string | null {
