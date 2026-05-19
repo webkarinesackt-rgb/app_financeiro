@@ -9,6 +9,7 @@ import { TrendingUp, TrendingDown, Calendar, Repeat, Target, AlertCircle, Chevro
 import { getTransactions } from '@/lib/transactions'
 import { buildForecast, type ForecastResult } from '@/lib/forecast'
 import { formatCurrency } from '@/lib/format'
+import { FixedCostsSection } from '@/components/previsao/fixed-costs-section'
 import type { Transaction } from '@/types'
 
 export default function PrevisaoPage() {
@@ -16,6 +17,7 @@ export default function PrevisaoPage() {
   const [loading, setLoading] = useState(true)
   const [windowMonths, setWindowMonths] = useState(6)
   const [forecast, setForecast] = useState<ForecastResult | null>(null)
+  const [fixedCostsMonthly, setFixedCostsMonthly] = useState(0)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -37,12 +39,16 @@ export default function PrevisaoPage() {
   useEffect(() => { fetchData() }, [fetchData])
 
   useEffect(() => {
-    if (transactions.length === 0) {
+    if (transactions.length === 0 && fixedCostsMonthly === 0) {
       setForecast(null)
       return
     }
-    setForecast(buildForecast(transactions, { windowMonths, projectionMonths: 3 }))
-  }, [transactions, windowMonths])
+    setForecast(buildForecast(transactions, {
+      windowMonths,
+      projectionMonths: 3,
+      fixedCostsMonthly,
+    }))
+  }, [transactions, windowMonths, fixedCostsMonthly])
 
   const hasData = forecast && forecast.monthlyTotals.length > 0
 
@@ -67,6 +73,9 @@ export default function PrevisaoPage() {
           </Select>
         </div>
       </div>
+
+      {/* Custos fixos vem sempre, mesmo sem histórico */}
+      <FixedCostsSection onChange={setFixedCostsMonthly} />
 
       {loading ? (
         <div className="space-y-3">
@@ -223,15 +232,15 @@ export default function PrevisaoPage() {
                   <ul className="space-y-1 text-slate-600 text-xs">
                     <li className="flex items-center gap-1.5">
                       <ChevronRight className="h-3 w-3" />
-                      Upload de planilha com custos fixos da equipe (somam à projeção)
-                    </li>
-                    <li className="flex items-center gap-1.5">
-                      <ChevronRight className="h-3 w-3" />
                       Comparativo Real × Previsto no fim do mês (alertas)
                     </li>
                     <li className="flex items-center gap-1.5">
                       <ChevronRight className="h-3 w-3" />
                       Detecção de oportunidades de corte (gastos crescendo)
+                    </li>
+                    <li className="flex items-center gap-1.5">
+                      <ChevronRight className="h-3 w-3" />
+                      Importar planilha do Andrei (conta secundária)
                     </li>
                   </ul>
                 </div>

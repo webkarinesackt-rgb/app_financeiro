@@ -76,10 +76,11 @@ function median(arr: number[]): number {
 
 export function buildForecast(
   transactions: Transaction[],
-  options: { windowMonths?: number; projectionMonths?: number } = {}
+  options: { windowMonths?: number; projectionMonths?: number; fixedCostsMonthly?: number } = {}
 ): ForecastResult {
   const window = options.windowMonths ?? 6
   const projection = options.projectionMonths ?? 3
+  const fixedCostsMonthly = options.fixedCostsMonthly ?? 0
 
   // Filtra só despesas
   const expenses = transactions.filter((t) => t.type === 'expense')
@@ -166,6 +167,7 @@ export function buildForecast(
     : averageMonthly  // poucos dias do mês: usa média
 
   // ─── Projeção próximos meses ───────────────────────────────────────────
+  // Soma da média histórica + custos fixos cadastrados (equipe, infra, ferramentas)
   const projections: MonthlyTotal[] = []
   let cursor = currentMonthKey
   for (let i = 0; i < projection; i++) {
@@ -173,7 +175,7 @@ export function buildForecast(
     projections.push({
       monthKey: cursor,
       monthLabel: monthLabel(cursor),
-      total: Math.round(averageMonthly),
+      total: Math.round(averageMonthly + fixedCostsMonthly),
       count: 0,
     })
   }

@@ -193,6 +193,68 @@ export const CLOSING_MARKETS = [
 
 export const CLOSING_BUSINESS_MODELS = ['Serviço', 'Infoproduto', 'Produto', 'Outro'] as const
 
+// ─── Custos Fixos (equipe / infra) ───────────────────────────────────────────
+
+export type FixedCostFrequency = 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly'
+export type FixedCostCategory = 'team' | 'tools' | 'infra' | 'marketing' | 'taxes' | 'other'
+
+export interface FixedCost {
+  id: string
+  user_id: string
+  name: string
+  amount: number
+  frequency: FixedCostFrequency
+  category: FixedCostCategory
+  notes: string | null
+  active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface FixedCostFormData {
+  name: string
+  amount: number
+  frequency: FixedCostFrequency
+  category: FixedCostCategory
+  notes: string | null
+  active: boolean
+}
+
+export const FIXED_COST_FREQUENCY_LABELS: Record<FixedCostFrequency, string> = {
+  weekly: 'Semanal',
+  biweekly: 'Quinzenal',
+  monthly: 'Mensal',
+  quarterly: 'Trimestral',
+  yearly: 'Anual',
+}
+
+export const FIXED_COST_CATEGORY_LABELS: Record<FixedCostCategory, string> = {
+  team: 'Equipe',
+  tools: 'Ferramentas',
+  infra: 'Infraestrutura',
+  marketing: 'Marketing',
+  taxes: 'Impostos',
+  other: 'Outros',
+}
+
+export const FIXED_COST_CATEGORY_COLORS: Record<FixedCostCategory, string> = {
+  team: '#10b981',
+  tools: '#3b82f6',
+  infra: '#8b5cf6',
+  marketing: '#f59e0b',
+  taxes: '#ef4444',
+  other: '#64748b',
+}
+
+// Quanto cada frequência custa por mês (pra cálculos de projeção)
+export const FREQUENCY_TO_MONTHLY: Record<FixedCostFrequency, number> = {
+  weekly: 4.33,        // ~52/12
+  biweekly: 2.17,      // ~26/12
+  monthly: 1,
+  quarterly: 1 / 3,
+  yearly: 1 / 12,
+}
+
 export const CLOSING_SEGMENTS = [
   'Engenharia',
   'Corretores',
