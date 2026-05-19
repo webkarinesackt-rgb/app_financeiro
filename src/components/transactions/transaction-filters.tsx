@@ -7,10 +7,12 @@ import { Button } from '@/components/ui/button'
 import { MonthSelector } from '@/components/dashboard/month-selector'
 import { getAccounts } from '@/lib/accounts'
 import { getCreditCards } from '@/lib/credit-cards'
-import { CATEGORY_LABELS, INCOME_CATEGORIES, EXPENSE_CATEGORIES, type Account, type CreditCard } from '@/types'
+import { getCustomCategories } from '@/lib/transactions'
+import {
+  CATEGORY_LABELS, INCOME_CATEGORIES, EXPENSE_CATEGORIES,
+  type Account, type CreditCard, type Category,
+} from '@/types'
 import { X, Wallet, CreditCard as CardIcon } from 'lucide-react'
-
-const ALL_CATEGORIES = [...new Set([...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES])]
 
 interface TransactionFiltersProps {
   month: number
@@ -26,11 +28,18 @@ export function TransactionFilters({ month, year, category, type, accountId, cre
   const searchParams = useSearchParams()
   const [accounts, setAccounts] = useState<Account[]>([])
   const [cards, setCards] = useState<CreditCard[]>([])
+  const [customCategories, setCustomCategories] = useState<string[]>([])
 
   useEffect(() => {
     getAccounts().then(setAccounts).catch(() => {})
     getCreditCards().then(setCards).catch(() => {})
   }, [])
+
+  // Recarrega customizadas quando o tipo muda
+  useEffect(() => {
+    const t = type === 'income' || type === 'expense' ? type : undefined
+    getCustomCategories(t).then(setCustomCategories).catch(() => setCustomCategories([]))
+  }, [type])
 
   function setParam(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString())
@@ -38,9 +47,10 @@ export function TransactionFilters({ month, year, category, type, accountId, cre
       params.delete(key)
     } else {
       params.set(key, value)
-      // account and card are mutually exclusive
       if (key === 'accountId') params.delete('creditCardId')
       if (key === 'creditCardId') params.delete('accountId')
+      // Trocar de tipo limpa a categoria (pra evitar filtro inválido tipo "income + Alimentação")
+      if (key === 'type') params.delete('category')
     }
     router.push(`?${params.toString()}`)
   }
@@ -53,6 +63,12 @@ export function TransactionFilters({ month, year, category, type, accountId, cre
   }
 
   const hasActiveFilters = category !== 'all' || type !== 'all' || accountId !== 'all' || creditCardId !== 'all'
+
+  // Decide quais categorias built-in mostrar com base no tipo
+  const builtInCategories: Category[] =
+    type === 'income' ? INCOME_CATEGORIES.filter((c) => c !== 'custom') :
+    type === 'expense' ? EXPENSE_CATEGORIES.filter((c) => c !== 'custom') :
+    Array.from(new Set([...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES])).filter((c) => c !== 'custom')
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -70,14 +86,29 @@ export function TransactionFilters({ month, year, category, type, accountId, cre
         </SelectContent>
       </Select>
 
-      {/* Categoria */}
+      {/* Categoria — reage ao tipo + inclui customizadas */}
       <Select value={category} onValueChange={(v) => setParam('category', v ?? 'all')}>
-        <SelectTrigger className="w-[160px] h-8 text-sm">
+        <SelectTrigger className="w-[200px] h-8 text-sm">
           <SelectValue placeholder="Categoria" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Todas as categorias</SelectItem>
-          {ALL_CATEGORIES.map((cat) => (
+
+          {customCategories.length > 0 && (
+            <>
+              <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase">Personalizadas</div>
+              {customCategories.map((name) => (
+                <SelectItem key={`custom:${name}`} value={`custom:${name}`}>
+                  {name}
+                </SelectItem>
+              ))}
+            </>
+          )}
+
+          <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase">
+            {type === 'income' ? 'Receitas' : type === 'expense' ? 'Despesas' : 'Padrão'}
+          </div>
+          {builtInCategories.map((cat) => (
             <SelectItem key={cat} value={cat}>{CATEGORY_LABELS[cat]}</SelectItem>
           ))}
         </SelectContent>

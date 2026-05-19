@@ -2,6 +2,26 @@ import { addMonths } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import type { Transaction, TransactionFormData } from '@/types'
 
+// Retorna as custom_category distintas usadas pelo usuário, opcionalmente filtradas
+// por tipo (income/expense). Usado pra montar dropdowns de filtro.
+export async function getCustomCategories(type?: 'income' | 'expense'): Promise<string[]> {
+  const supabase = createClient()
+  let query = supabase
+    .from('transactions')
+    .select('custom_category, type')
+    .eq('category', 'custom')
+    .not('custom_category', 'is', null)
+
+  if (type) query = query.eq('type', type)
+
+  const { data, error } = await query
+  if (error) return []
+  const names = (data ?? [])
+    .map((r) => (r as { custom_category: string | null }).custom_category)
+    .filter((n): n is string => !!n && n.trim().length > 0)
+  return Array.from(new Set(names)).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+}
+
 export async function getTransactions(filters?: {
   month?: number
   year?: number
@@ -18,7 +38,13 @@ export async function getTransactions(filters?: {
     const end = new Date(filters.year, filters.month, 0).toISOString().split('T')[0]
     query = query.gte('date', start).lte('date', end)
   }
-  if (filters?.category && filters.category !== 'all') query = query.eq('category', filters.category)
+  if (filters?.category && filters.category !== 'all') {
+    if (filters.category.startsWith('custom:')) {
+      query = query.eq('category', 'custom').eq('custom_category', filters.category.slice(7))
+    } else {
+      query = query.eq('category', filters.category)
+    }
+  }
   if (filters?.type && filters.type !== 'all') query = query.eq('type', filters.type)
   if (filters?.accountId && filters.accountId !== 'all') query = query.eq('account_id', filters.accountId)
   if (filters?.creditCardId && filters.creditCardId !== 'all') query = query.eq('credit_card_id', filters.creditCardId)
