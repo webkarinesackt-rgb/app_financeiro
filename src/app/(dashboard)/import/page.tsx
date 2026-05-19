@@ -5,11 +5,12 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Loader2, Send, Bot, User, CheckSquare, Square, TrendingUp, TrendingDown, CheckCheck, Trash2, Wallet, Info } from 'lucide-react'
+import { Loader2, Send, Bot, User, CheckSquare, Square, TrendingUp, TrendingDown, CheckCheck, Trash2, Wallet, Info, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 import { createTransaction } from '@/lib/transactions'
 import { getAccounts } from '@/lib/accounts'
 import { formatCurrency } from '@/lib/format'
+import { parseBankCsv } from '@/lib/bank-csv'
 import { CATEGORY_LABELS, PAYMENT_METHOD_LABELS } from '@/types'
 import type { Account, Category, PaymentMethod } from '@/types'
 
@@ -49,6 +50,7 @@ export default function ImportPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [accounts, setAccounts] = useState<Account[]>([])
   const [accountId, setAccountId] = useState<string>('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     getAccounts().then((accs) => {
@@ -100,6 +102,42 @@ export default function ImportPage() {
       setMessages((prev) => [...prev, { role: 'assistant', text: 'Erro de conexão. Verifique sua conexão e tente novamente.' }])
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleCsvFile(file: File) {
+    if (loading) return
+    setLoading(true)
+    try {
+      const text = await file.text()
+      const result = parseBankCsv(text)
+
+      const userMsg: ChatMessage = { role: 'user', text: `📎 ${file.name} (${(file.size / 1024).toFixed(1)} KB)` }
+      setMessages((prev) => [...prev, userMsg])
+
+      if (result.transactions.length === 0) {
+        const reason = result.warnings.length > 0 ? result.warnings.join(' ') : 'Nenhuma transação reconhecida.'
+        setMessages((prev) => [...prev, { role: 'assistant', text: `Não consegui ler o CSV: ${reason}` }])
+        return
+      }
+
+      const txs: ParsedTransaction[] = result.transactions.map((t) => ({
+        ...t,
+        // Desmarca repasses do Asaas (já contabilizados via integração)
+        selected: !isAsaasTransfer(t.description),
+      }))
+
+      const skipNote = result.skippedRows > 0 ? ` (${result.skippedRows} linha(s) ignorada(s))` : ''
+      setMessages((prev) => [...prev, {
+        role: 'assistant',
+        text: `Li **${txs.length} transação(ões)** do arquivo${skipNote}. Linhas com "asaas" vêm desmarcadas pra evitar duplicação com a integração. Revise abaixo e clique em "Importar selecionadas".`,
+        transactions: txs,
+      }])
+    } catch {
+      setMessages((prev) => [...prev, { role: 'assistant', text: 'Erro ao ler o arquivo CSV. Verifique se é um CSV válido do extrato.' }])
+    } finally {
+      setLoading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
 
@@ -322,6 +360,31 @@ export default function ImportPage() {
 
       {/* Input */}
       <div className="shrink-0 border-t border-slate-100 pt-3">
+        <div className="flex items-center gap-2 mb-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv,text/csv,application/vnd.ms-excel"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (file) handleCsvFile(file)
+            }}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={loading}
+            className="gap-1.5 text-xs"
+          >
+            <Upload className="h-3.5 w-3.5" />
+            Carregar CSV do banco
+          </Button>
+          <span className="text-xs text-slate-400">ou cole o texto abaixo (usa IA)</span>
+        </div>
+
         <div className="flex gap-2 items-end">
           <textarea
             ref={textareaRef}
@@ -342,7 +405,7 @@ export default function ImportPage() {
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
         </div>
-        <p className="text-xs text-slate-400 mt-1.5 text-center">Ctrl+Enter para enviar</p>
+        <p className="text-xs text-slate-400 mt-1.5 text-center">CSV é nativo e gratuito · texto colado usa IA</p>
       </div>
     </div>
   )
