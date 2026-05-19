@@ -21,6 +21,9 @@ export interface ParsedCsvTransaction {
   date: string  // YYYY-MM-DD
   category: Category
   payment_method: PaymentMethod
+  installment_total?: number | null
+  installment_current?: number | null
+  isCardPayment?: boolean // linha de pagamento da fatura (não é despesa real)
 }
 
 export interface CsvParseResult {
@@ -28,6 +31,7 @@ export interface CsvParseResult {
   totalRows: number
   skippedRows: number
   warnings: string[]
+  format: 'checking' | 'card_invoice' | 'unknown'
 }
 
 // ─── Detecção de delimitador ─────────────────────────────────────────────────
@@ -130,6 +134,31 @@ function inferPaymentMethod(desc: string): PaymentMethod {
   return 'other'
 }
 
+// Categorização extra pros itens típicos de fatura de cartão
+function inferCardCategory(desc: string): Category {
+  const d = norm(desc)
+  if (/\b(facebk|facebook|google ads|ads )/.test(d)) return 'subscriptions'  // ad spend → assinaturas
+  if (/\b(clickup|notion|figma|adobe|nuvemhost|reportei|kiwify|sendflow|paypal|manychat|ui8)/.test(d)) return 'subscriptions'
+  if (/\b(claude|openai|chatgpt|anthropic)/.test(d)) return 'subscriptions'
+  if (/\bapple\s?com\s?bill|applecombill/.test(d)) return 'subscriptions'
+  if (/\biof/.test(d)) return 'taxes'
+  if (/(encargos|juros|multa|rotativo)/.test(d)) return 'other'  // financeiros
+  return 'other'
+}
+
+// Detecta "Parcela 3/6" → { current: 3, total: 6 }
+function parseInstallment(raw: string): { current: number; total: number } | null {
+  const m = raw.match(/parcela\s*(\d+)\s*\/\s*(\d+)/i)
+  if (!m) return null
+  return { current: Number(m[1]), total: Number(m[2]) }
+}
+
+// É linha de pagamento da fatura do cartão? (não é uma despesa real)
+function isCardPaymentLine(desc: string): boolean {
+  const d = norm(desc)
+  return /pagamento on line|pagto debito autom|pgto fatura|estorno/.test(d)
+}
+
 // ─── Parser principal ────────────────────────────────────────────────────────
 export function parseBankCsv(text: string): CsvParseResult {
   const warnings: string[] = []
@@ -140,7 +169,7 @@ export function parseBankCsv(text: string): CsvParseResult {
   const lines = normalized.split('\n').filter((l) => l.trim().length > 0)
 
   if (lines.length === 0) {
-    return { transactions: [], totalRows: 0, skippedRows: 0, warnings: ['Arquivo vazio'] }
+    return { transactions: [], totalRows: 0, skippedRows: 0, warnings: ['Arquivo vazio'], format: 'unknown' }
   }
 
   // Tenta detectar o delimitador olhando as primeiras linhas
@@ -160,7 +189,7 @@ export function parseBankCsv(text: string): CsvParseResult {
 
   if (headerIdx === -1) {
     return { transactions: [], totalRows: lines.length, skippedRows: lines.length,
-             warnings: ['Não encontrei o cabeçalho do extrato (linha com "Data" e "Valor"). Verifique o arquivo.'] }
+             warnings: ['Não encontrei o cabeçalho do extrato (linha com "Data" e "Valor"). Verifique o arquivo.'], format: 'unknown' }
   }
 
   // Mapeia índices de colunas
@@ -168,17 +197,23 @@ export function parseBankCsv(text: string): CsvParseResult {
   const idx = {
     date: headers.findIndex((h) => /\bdata\b/.test(h)),
     description: headers.findIndex((h) =>
-      /descric|descricao|historico|memo|detalhes/.test(h)
+      /lancamento|descric|descricao|historico|memo|detalhes/.test(h)
     ),
-    history: headers.findIndex((h) => /historic|tipo/.test(h)),
+    history: headers.findIndex((h) => /historic/.test(h)),
     amount: headers.findIndex((h) => /\bvalor\b/.test(h)),
     balance: headers.findIndex((h) => /saldo/.test(h)),
-    type: headers.findIndex((h) => /tipo lan|tipo de lan|d\/c|debito\/credito/.test(h)),
+    type: headers.findIndex((h) => /^tipo$|tipo lan|tipo de lan|d\/c|debito\/credito/.test(h)),
+    cartao: headers.findIndex((h) => /^cartao$/.test(h)),
+    categoria: headers.findIndex((h) => /^categoria$/.test(h)),
   }
+
+  // Detecta formato: fatura de cartão tem coluna Cartao + Lançamento + sem Saldo
+  const format: 'checking' | 'card_invoice' =
+    idx.cartao !== -1 && idx.balance === -1 ? 'card_invoice' : 'checking'
 
   if (idx.date === -1 || idx.amount === -1) {
     return { transactions: [], totalRows: lines.length, skippedRows: lines.length,
-             warnings: [`Colunas obrigatórias não encontradas. Cabeçalho lido: ${headers.join(', ')}`] }
+             warnings: [`Colunas obrigatórias não encontradas. Cabeçalho lido: ${headers.join(', ')}`], format: 'unknown' }
   }
 
   // Processa linhas de dados
@@ -195,12 +230,22 @@ export function parseBankCsv(text: string): CsvParseResult {
     const rawAmount = parseAmount(amountRaw)
     if (isNaN(rawAmount) || rawAmount === 0) { skipped++; continue }
 
-    // Tipo: D/C explícito tem prioridade, senão usa sinal do valor
-    let type: 'income' | 'expense' = rawAmount < 0 ? 'expense' : 'income'
-    if (idx.type !== -1 && row[idx.type]) {
-      const t = norm(row[idx.type])
-      if (t === 'd' || t.startsWith('debit') || t === 'saida') type = 'expense'
-      else if (t === 'c' || t.startsWith('credit') || t === 'entrada') type = 'income'
+    // Tipo do lançamento (em faturas de cartão é "Compra à vista" / "Parcela X/Y")
+    const tipoRaw = idx.type !== -1 ? (row[idx.type] ?? '').trim() : ''
+    const installment = parseInstallment(tipoRaw)
+
+    // Em fatura de cartão: TODA linha de compra é despesa (independente do sinal,
+    // pois positivos só aparecem em estornos/pagamentos). Em conta corrente: sinal manda.
+    let type: 'income' | 'expense'
+    if (format === 'card_invoice') {
+      type = rawAmount > 0 ? 'income' : 'expense'  // será reavaliado abaixo
+    } else {
+      type = rawAmount < 0 ? 'expense' : 'income'
+      if (idx.type !== -1 && tipoRaw) {
+        const t = norm(tipoRaw)
+        if (t === 'd' || t.startsWith('debit') || t === 'saida') type = 'expense'
+        else if (t === 'c' || t.startsWith('credit') || t === 'entrada') type = 'income'
+      }
     }
 
     const amount = Math.abs(rawAmount)
@@ -211,13 +256,22 @@ export function parseBankCsv(text: string): CsvParseResult {
     let description = [histPart, descPart].filter(Boolean).join(' · ').trim()
     if (!description) description = histPart || descPart || 'Sem descrição'
 
+    const isPayment = format === 'card_invoice' && isCardPaymentLine(description)
+
+    const category = format === 'card_invoice'
+      ? inferCardCategory(description)
+      : inferCategory(description, type)
+
     transactions.push({
       type,
       amount,
       description,
       date,
-      category: inferCategory(description, type),
-      payment_method: inferPaymentMethod(description),
+      category,
+      payment_method: format === 'card_invoice' ? 'credit' : inferPaymentMethod(description),
+      installment_total: installment?.total ?? null,
+      installment_current: installment?.current ?? null,
+      isCardPayment: isPayment,
     })
   }
 
@@ -225,10 +279,15 @@ export function parseBankCsv(text: string): CsvParseResult {
     warnings.push('Cabeçalho encontrado mas nenhuma linha de dados foi reconhecida.')
   }
 
+  if (format === 'card_invoice') {
+    warnings.push('Detectado: fatura de cartão de crédito. Linhas de pagamento da fatura vêm desmarcadas (não são despesas reais).')
+  }
+
   return {
     transactions,
     totalRows: lines.length - headerIdx - 1,
     skippedRows: skipped,
     warnings,
+    format,
   }
 }

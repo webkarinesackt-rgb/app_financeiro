@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { LayoutDashboard, ArrowLeftRight, BarChart3, Settings, TrendingUp, LogOut, ChevronDown, CalendarCheck, Handshake, PiggyBank } from 'lucide-react'
+import { LayoutDashboard, ArrowLeftRight, BarChart3, Settings, TrendingUp, LogOut, ChevronDown, CalendarCheck, Handshake, PiggyBank, LineChart } from 'lucide-react'
 import { toast } from 'sonner'
 import { useState } from 'react'
 
@@ -15,6 +15,7 @@ const navItems = [
   { href: '/transactions', label: 'Lançamentos', icon: ArrowLeftRight },
   { href: '/closings', label: 'Fechamentos', icon: Handshake },
   { href: '/reservas', label: 'Reservas', icon: PiggyBank },
+  { href: '/previsao', label: 'Previsão', icon: LineChart },
   { href: '/reports', label: 'Relatórios', icon: BarChart3 },
   { href: '/cashflow', label: 'Fluxo de Caixa', icon: CalendarCheck },
 ]

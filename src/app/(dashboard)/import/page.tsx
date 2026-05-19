@@ -9,8 +9,10 @@ import { Loader2, Send, Bot, User, CheckSquare, Square, TrendingUp, TrendingDown
 import { toast } from 'sonner'
 import { createTransaction } from '@/lib/transactions'
 import { getAccounts } from '@/lib/accounts'
+import { getCreditCards } from '@/lib/credit-cards'
 import { formatCurrency } from '@/lib/format'
 import { parseBankCsv } from '@/lib/bank-csv'
+import type { CreditCard } from '@/types'
 import { CATEGORY_LABELS, PAYMENT_METHOD_LABELS } from '@/types'
 import type { Account, Category, PaymentMethod } from '@/types'
 
@@ -29,6 +31,9 @@ interface ParsedTransaction {
   category: Category
   payment_method: PaymentMethod
   selected?: boolean
+  installment_total?: number | null
+  installment_current?: number | null
+  isCardPayment?: boolean
 }
 
 interface ChatMessage {
@@ -49,15 +54,23 @@ export default function ImportPage() {
   const [importing, setImporting] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [accounts, setAccounts] = useState<Account[]>([])
-  const [accountId, setAccountId] = useState<string>('')
+  const [cards, setCards] = useState<CreditCard[]>([])
+  const [destination, setDestination] = useState<string>('')  // 'acc:<id>' ou 'card:<id>'
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    getAccounts().then((accs) => {
+    Promise.all([getAccounts(), getCreditCards()]).then(([accs, crds]) => {
       setAccounts(accs)
-      if (accs.length > 0 && !accountId) setAccountId(accs[0].id)
+      setCards(crds)
+      if (!destination) {
+        if (accs.length > 0) setDestination(`acc:${accs[0].id}`)
+        else if (crds.length > 0) setDestination(`card:${crds[0].id}`)
+      }
     }).catch(() => {})
-  }, [accountId])
+  }, [destination])
+
+  const accountId = destination.startsWith('acc:') ? destination.slice(4) : ''
+  const creditCardId = destination.startsWith('card:') ? destination.slice(5) : ''
 
   async function handleSend() {
     if (!input.trim() || loading) return
@@ -123,14 +136,26 @@ export default function ImportPage() {
 
       const txs: ParsedTransaction[] = result.transactions.map((t) => ({
         ...t,
-        // Desmarca repasses do Asaas (já contabilizados via integração)
-        selected: !isAsaasTransfer(t.description),
+        // Desmarca: repasses Asaas + pagamentos de fatura (em CSV de cartão)
+        selected: !isAsaasTransfer(t.description) && !t.isCardPayment,
       }))
 
+      // Se é fatura de cartão e tem cartão cadastrado, troca o destino automaticamente
+      let extraNote = ''
+      if (result.format === 'card_invoice') {
+        if (cards.length > 0 && !destination.startsWith('card:')) {
+          setDestination(`card:${cards[0].id}`)
+          extraNote = ` Destino trocado pro cartão "${cards[0].name}".`
+        } else if (cards.length === 0) {
+          extraNote = ' ⚠️ Nenhum cartão cadastrado — cadastra em /settings/cards antes de importar.'
+        }
+      }
+
       const skipNote = result.skippedRows > 0 ? ` (${result.skippedRows} linha(s) ignorada(s))` : ''
+      const fmtLabel = result.format === 'card_invoice' ? '**fatura de cartão**' : '**extrato de conta**'
       setMessages((prev) => [...prev, {
         role: 'assistant',
-        text: `Li **${txs.length} transação(ões)** do arquivo${skipNote}. Linhas com "asaas" vêm desmarcadas pra evitar duplicação com a integração. Revise abaixo e clique em "Importar selecionadas".`,
+        text: `Li ${fmtLabel}: ${txs.length} lançamento(s)${skipNote}.${extraNote} Pagamentos de fatura e repasses do Asaas vêm desmarcados. Revise e clique em "Importar selecionadas".`,
         transactions: txs,
       }])
     } catch {
@@ -185,10 +210,10 @@ export default function ImportPage() {
           date: tx.date,
           category: tx.category,
           custom_category: null,
-          payment_method: tx.payment_method,
+          payment_method: creditCardId ? 'credit' : tx.payment_method,
           account_id: accountId || null,
-          credit_card_id: null,
-          installment_total: null,
+          credit_card_id: creditCardId || null,
+          installment_total: tx.installment_total ?? null,
           notes: null,
           is_recurring: false,
           recurrence_interval: null,
@@ -220,17 +245,30 @@ export default function ImportPage() {
           <div className="flex items-center gap-2 flex-1">
             <Wallet className="h-4 w-4 text-slate-400 shrink-0" />
             <span className="text-xs text-slate-500 shrink-0">Importar para:</span>
-            {accounts.length === 0 ? (
-              <span className="text-xs text-amber-600">Nenhuma conta cadastrada — crie uma em Configurações</span>
+            {accounts.length === 0 && cards.length === 0 ? (
+              <span className="text-xs text-amber-600">Nenhuma conta/cartão cadastrado — crie em Configurações</span>
             ) : (
-              <Select value={accountId} onValueChange={(v) => { if (v) setAccountId(v) }}>
+              <Select value={destination} onValueChange={(v) => { if (v) setDestination(v) }}>
                 <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                 <SelectContent>
-                  {accounts.map((a) => (
-                    <SelectItem key={a.id} value={a.id}>
-                      {a.name}{a.kind === 'reserve' ? ' (reserva)' : ''}
-                    </SelectItem>
-                  ))}
+                  {accounts.length > 0 && (
+                    <>
+                      <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase">Contas</div>
+                      {accounts.map((a) => (
+                        <SelectItem key={a.id} value={`acc:${a.id}`}>
+                          {a.name}{a.kind === 'reserve' ? ' (reserva)' : ''}
+                        </SelectItem>
+                      ))}
+                    </>
+                  )}
+                  {cards.length > 0 && (
+                    <>
+                      <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase">Cartões</div>
+                      {cards.map((c) => (
+                        <SelectItem key={c.id} value={`card:${c.id}`}>{c.name}</SelectItem>
+                      ))}
+                    </>
+                  )}
                 </SelectContent>
               </Select>
             )}
