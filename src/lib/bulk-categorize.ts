@@ -20,6 +20,48 @@ function extractClient(description: string): string | null {
   return null
 }
 
+// Lista DESPESAS não-categorizadas (category='other' OU sem custom_category),
+// agrupado por "nome" extraído (lojista/serviço) da description.
+export async function getUncategorizedExpenses(fromDate?: string): Promise<UncategorizedClient[]> {
+  const supabase = createClient()
+  let query = supabase
+    .from('transactions')
+    .select('description, amount, date, category, custom_category')
+    .eq('type', 'expense')
+    .or('category.eq.other,and(category.eq.custom,custom_category.is.null)')
+
+  if (fromDate) query = query.gte('date', fromDate)
+
+  const { data, error } = await query
+  if (error || !data) return []
+
+  const map = new Map<string, UncategorizedClient>()
+  for (const t of data) {
+    // Pra despesas (que vêm do cartão), o "nome" é o lojista — tipicamente
+    // os primeiros tokens da descrição.
+    const tokens = t.description.split(/\s+/).filter((w) => w.length >= 3)
+    const key = tokens.slice(0, 2).join(' ') || t.description.slice(0, 30)
+    const normKey = key.replace(/\d+$/, '').trim()  // remove números no final
+    if (!normKey) continue
+
+    const cur = map.get(normKey) ?? {
+      name: normKey,
+      total: 0,
+      count: 0,
+      firstDate: t.date,
+      lastDate: t.date,
+      sample: t.description,
+    }
+    cur.total += Number(t.amount)
+    cur.count += 1
+    if (t.date < cur.firstDate) cur.firstDate = t.date
+    if (t.date > cur.lastDate) cur.lastDate = t.date
+    map.set(normKey, cur)
+  }
+
+  return Array.from(map.values()).sort((a, b) => b.total - a.total)
+}
+
 // Lista clientes únicos das transações em "Receita Landing Page / Site"
 // sem subcategoria definida — agrupado por nome extraído da description.
 // fromDate: opcional, filtra só transações a partir dessa data (YYYY-MM-DD).
@@ -58,6 +100,36 @@ export async function getUncategorizedLPClients(fromDate?: string): Promise<Unca
   }
 
   return Array.from(map.values()).sort((a, b) => b.total - a.total)
+}
+
+// Aplica categorização a TODAS as despesas que casem com o nome (lojista).
+// type='expense'.
+export async function categorizeExpenseByPattern(
+  pattern: string,
+  category: string,
+  customCategory: string | null,
+): Promise<number> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return 0
+
+  const clean = pattern.replace(/[%_]/g, '').trim()
+  if (clean.length < 3) return 0
+
+  const { data, error } = await supabase
+    .from('transactions')
+    .update({
+      category: customCategory ? 'custom' : category,
+      custom_category: customCategory,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('user_id', user.id)
+    .eq('type', 'expense')
+    .ilike('description', `%${clean}%`)
+    .select('id')
+
+  if (error) return 0
+  return data?.length ?? 0
 }
 
 // Aplica uma categorização a TODAS as transações que tenham o nome do

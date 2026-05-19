@@ -13,13 +13,13 @@ import { useState } from 'react'
 const navItems = [
   { href: '/dashboard', label: 'Visão Geral', icon: LayoutDashboard },
   { href: '/transactions', label: 'Lançamentos', icon: ArrowLeftRight },
-  { href: '/categorizar', label: 'Categorizar', icon: Sparkles },
   { href: '/a-cobrar', label: 'A Cobrar', icon: AlertCircle },
   { href: '/closings', label: 'Fechamentos', icon: Handshake },
   { href: '/reservas', label: 'Reservas', icon: PiggyBank },
   { href: '/previsao', label: 'Previsão', icon: LineChart },
   { href: '/reports', label: 'Relatórios', icon: BarChart3 },
   { href: '/cashflow', label: 'Fluxo de Caixa', icon: CalendarCheck },
+  { href: '/categorizar', label: 'Categorizar', icon: Sparkles },
 ]
 
 const settingsItems = [
