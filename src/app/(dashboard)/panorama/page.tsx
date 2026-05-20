@@ -1,0 +1,431 @@
+'use client'
+
+import { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
+import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
+import {
+  TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
+  Wallet, Target, Repeat, Briefcase, AlertCircle, ChevronRight,
+} from 'lucide-react'
+import { getTransactions } from '@/lib/transactions'
+import { getRecurringClients, sumMonthlyRecurringRevenue } from '@/lib/recurring-clients'
+import { getFixedCosts, sumMonthlyFixedCosts } from '@/lib/fixed-costs'
+import { formatCurrency, getMonthName } from '@/lib/format'
+import type { Transaction, RecurringClient, FixedCost } from '@/types'
+
+const PROJECT_COLORS: Record<string, string> = {
+  'Landing page com copy': '#10b981',
+  'Landing page sem copy': '#3b82f6',
+  'Site institucional': '#8b5cf6',
+  'Programação': '#6366f1',
+  'Alterações': '#f59e0b',
+  'Anúncios': '#f43f5e',
+  'Receita curso': '#ec4899',
+  'Receita recorrente': '#14b8a6',
+  'Ressarcimento sócios': '#94a3b8',
+  'Sem categoria': '#cbd5e1',
+}
+
+const EXPENSE_COLORS: Record<string, string> = {
+  'Marketing': '#f43f5e',
+  'Ferramentas': '#3b82f6',
+  'Infraestrutura': '#8b5cf6',
+  'Equipe': '#10b981',
+  'Cursos / Treinamentos': '#6366f1',
+  'Contabilidade': '#06b6d4',
+  'Impostos': '#f59e0b',
+  'Encargos financeiros': '#f97316',
+  'Alimentação': '#eab308',
+  'Outros': '#64748b',
+}
+
+export default function PanoramaPage() {
+  const [period, setPeriod] = useState<'month' | 'year'>('month')
+  const [currentTx, setCurrentTx] = useState<Transaction[]>([])
+  const [prevTx, setPrevTx] = useState<Transaction[]>([])
+  const [recurringClients, setRecurringClients] = useState<RecurringClient[]>([])
+  const [fixedCosts, setFixedCosts] = useState<FixedCost[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const now = new Date()
+  const month = now.getMonth() + 1
+  const year = now.getFullYear()
+  const prevMonth = month === 1 ? 12 : month - 1
+  const prevYear = month === 1 ? year - 1 : year
+
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    try {
+      if (period === 'month') {
+        const [cur, prev, rc, fc] = await Promise.all([
+          getTransactions({ month, year }),
+          getTransactions({ month: prevMonth, year: prevYear }),
+          getRecurringClients(),
+          getFixedCosts(),
+        ])
+        setCurrentTx(cur)
+        setPrevTx(prev)
+        setRecurringClients(rc)
+        setFixedCosts(fc)
+      } else {
+        const monthsThisYear = Array.from({ length: 12 }, (_, i) => i + 1)
+        const monthsLastYear = Array.from({ length: 12 }, (_, i) => i + 1)
+        const [curResults, prevResults, rc, fc] = await Promise.all([
+          Promise.all(monthsThisYear.map((m) => getTransactions({ month: m, year }))),
+          Promise.all(monthsLastYear.map((m) => getTransactions({ month: m, year: year - 1 }))),
+          getRecurringClients(),
+          getFixedCosts(),
+        ])
+        setCurrentTx(curResults.flat())
+        setPrevTx(prevResults.flat())
+        setRecurringClients(rc)
+        setFixedCosts(fc)
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [period, month, year, prevMonth, prevYear])
+
+  useEffect(() => { fetchData() }, [fetchData])
+
+  // KPIs principais
+  const income = currentTx.filter((t) => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0)
+  const expense = currentTx.filter((t) => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0)
+  const lucro = income - expense
+  const margem = income > 0 ? (lucro / income) * 100 : 0
+
+  const prevIncome = prevTx.filter((t) => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0)
+  const prevExpense = prevTx.filter((t) => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0)
+  const prevLucro = prevIncome - prevExpense
+
+  const incomeDelta = prevIncome > 0 ? ((income - prevIncome) / prevIncome) * 100 : 0
+  const expenseDelta = prevExpense > 0 ? ((expense - prevExpense) / prevExpense) * 100 : 0
+  const lucroDelta = prevLucro !== 0 ? ((lucro - prevLucro) / Math.abs(prevLucro)) * 100 : 0
+
+  const mrr = sumMonthlyRecurringRevenue(recurringClients)
+  const arr = mrr * 12
+  const monthlyFixedCosts = sumMonthlyFixedCosts(fixedCosts)
+
+  // Receita por tipo de projeto
+  const incomeByType = currentTx
+    .filter((t) => t.type === 'income')
+    .reduce<Record<string, number>>((acc, t) => {
+      const key = t.subcategory ?? t.custom_category ?? 'Sem categoria'
+      acc[key] = (acc[key] ?? 0) + Number(t.amount)
+      return acc
+    }, {})
+
+  const incomeBreakdown = Object.entries(incomeByType)
+    .map(([name, amount]) => ({
+      name,
+      amount,
+      percentage: income > 0 ? (amount / income) * 100 : 0,
+      color: PROJECT_COLORS[name] ?? '#94a3b8',
+    }))
+    .sort((a, b) => b.amount - a.amount)
+
+  // Despesa por categoria
+  const expenseByType = currentTx
+    .filter((t) => t.type === 'expense')
+    .reduce<Record<string, number>>((acc, t) => {
+      const key = t.custom_category ?? t.category ?? 'Outros'
+      acc[key] = (acc[key] ?? 0) + Number(t.amount)
+      return acc
+    }, {})
+
+  const expenseBreakdown = Object.entries(expenseByType)
+    .map(([name, amount]) => ({
+      name,
+      amount,
+      percentage: expense > 0 ? (amount / expense) * 100 : 0,
+      color: EXPENSE_COLORS[name] ?? '#94a3b8',
+    }))
+    .sort((a, b) => b.amount - a.amount)
+
+  // Top 5 clientes por receita
+  const clientsByName = currentTx
+    .filter((t) => t.type === 'income' && t.custom_category === 'Receita Landing Page / Site')
+    .reduce<Record<string, { amount: number; count: number; subcategory: string | null }>>((acc, t) => {
+      const m1 = t.description.match(/^([^—]+?)\s*—/)
+      const m2 = t.description.match(/Cp\s*:[\d]+-(.+?)(\s+\d{6,}|$)/)
+      const name = m1?.[1].trim() ?? m2?.[1].trim() ?? null
+      if (!name || name.length < 3) return acc
+      const cur = acc[name] ?? { amount: 0, count: 0, subcategory: t.subcategory ?? null }
+      cur.amount += Number(t.amount)
+      cur.count += 1
+      acc[name] = cur
+      return acc
+    }, {})
+
+  const topClients = Object.entries(clientsByName)
+    .map(([name, v]) => ({ name, ...v }))
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 5)
+
+  const periodLabel = period === 'month' ? `${getMonthName(month)} ${year}` : `Ano ${year}`
+  const prevPeriodLabel = period === 'month' ? getMonthName(prevMonth) : `Ano ${year - 1}`
+
+  return (
+    <div className="space-y-5 max-w-5xl">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Panorama</h1>
+          <p className="text-slate-500 text-sm mt-0.5 capitalize">{periodLabel}</p>
+        </div>
+        <div className="inline-flex rounded-lg bg-slate-100 p-0.5 text-xs">
+          <button onClick={() => setPeriod('month')}
+            className={`px-3 py-1 rounded-md font-medium ${period === 'month' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>
+            Este mês
+          </button>
+          <button onClick={() => setPeriod('year')}
+            className={`px-3 py-1 rounded-md font-medium ${period === 'year' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>
+            Este ano
+          </button>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => <div key={i} className="h-32 bg-slate-100 rounded-xl animate-pulse" />)}
+        </div>
+      ) : (
+        <>
+          {/* KPIs principais */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <KPICard
+              label="Receita"
+              value={income}
+              delta={incomeDelta}
+              prevLabel={prevPeriodLabel}
+              prevValue={prevIncome}
+              color="emerald"
+              icon={<TrendingUp className="h-4 w-4" />}
+            />
+            <KPICard
+              label="Despesa"
+              value={expense}
+              delta={expenseDelta}
+              prevLabel={prevPeriodLabel}
+              prevValue={prevExpense}
+              color="red"
+              icon={<TrendingDown className="h-4 w-4" />}
+              invertDelta
+            />
+            <KPICard
+              label="Lucro líquido"
+              value={lucro}
+              delta={lucroDelta}
+              prevLabel={prevPeriodLabel}
+              prevValue={prevLucro}
+              color={lucro >= 0 ? 'blue' : 'red'}
+              icon={<Wallet className="h-4 w-4" />}
+            />
+            <Card className="border border-slate-100 shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs text-amber-600 font-medium">Margem</span>
+                  <Target className="h-4 w-4 text-amber-600" />
+                </div>
+                <p className="text-2xl font-bold text-slate-800">{margem.toFixed(1)}%</p>
+                <p className="text-xs text-slate-400 mt-1">
+                  R$ {formatCurrency(lucro).replace('R$', '').trim()} de R$ {formatCurrency(income).replace('R$', '').trim()}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* MRR + Custos fixos */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <Card className="border border-emerald-100 bg-emerald-50/40 shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Repeat className="h-4 w-4 text-emerald-600" />
+                    <span className="text-sm font-semibold text-slate-700">MRR · Receita recorrente mensal</span>
+                  </div>
+                  <Link href="/previsao" className="text-xs text-emerald-700 hover:underline">Ver →</Link>
+                </div>
+                <p className="text-2xl font-bold text-emerald-700">{formatCurrency(mrr)} <span className="text-sm font-normal text-slate-500">/ mês</span></p>
+                <p className="text-xs text-slate-500 mt-1">
+                  {recurringClients.filter((c) => c.active).length} cliente(s) ativo(s) · ARR projetado {formatCurrency(arr)}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border border-red-100 bg-red-50/40 shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Briefcase className="h-4 w-4 text-red-600" />
+                    <span className="text-sm font-semibold text-slate-700">Custos fixos mensais</span>
+                  </div>
+                  <Link href="/previsao" className="text-xs text-red-700 hover:underline">Ver →</Link>
+                </div>
+                <p className="text-2xl font-bold text-red-700">{formatCurrency(monthlyFixedCosts)} <span className="text-sm font-normal text-slate-500">/ mês</span></p>
+                <p className="text-xs text-slate-500 mt-1">
+                  Equipe + Ferramentas + Infra · projeção anual {formatCurrency(monthlyFixedCosts * 12)}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Breakdowns */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Receita por tipo */}
+            <Card className="border border-slate-100 shadow-sm">
+              <CardContent className="p-5">
+                <h2 className="text-sm font-semibold text-slate-700 mb-3">Receita por tipo de projeto</h2>
+                {incomeBreakdown.length === 0 ? (
+                  <p className="text-sm text-slate-400 py-6 text-center">Sem dados no período</p>
+                ) : (
+                  <div className="flex items-center gap-4">
+                    <div className="shrink-0">
+                      <ResponsiveContainer width={120} height={120}>
+                        <PieChart>
+                          <Pie data={incomeBreakdown} cx="50%" cy="50%" innerRadius={30} outerRadius={55}
+                            paddingAngle={2} dataKey="amount">
+                            {incomeBreakdown.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                          </Pie>
+                          <Tooltip formatter={(v) => formatCurrency(Number(v))} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="flex-1 min-w-0 space-y-1">
+                      {incomeBreakdown.slice(0, 6).map((item) => (
+                        <div key={item.name} className="flex items-center gap-2 text-xs">
+                          <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                          <span className="truncate text-slate-600 flex-1">{item.name}</span>
+                          <span className="font-semibold text-slate-700">{item.percentage.toFixed(0)}%</span>
+                        </div>
+                      ))}
+                      {incomeBreakdown.length > 6 && <p className="text-xs text-slate-400">+{incomeBreakdown.length - 6} outros</p>}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Despesa por categoria */}
+            <Card className="border border-slate-100 shadow-sm">
+              <CardContent className="p-5">
+                <h2 className="text-sm font-semibold text-slate-700 mb-3">Despesa por categoria</h2>
+                {expenseBreakdown.length === 0 ? (
+                  <p className="text-sm text-slate-400 py-6 text-center">Sem dados no período</p>
+                ) : (
+                  <div className="flex items-center gap-4">
+                    <div className="shrink-0">
+                      <ResponsiveContainer width={120} height={120}>
+                        <PieChart>
+                          <Pie data={expenseBreakdown} cx="50%" cy="50%" innerRadius={30} outerRadius={55}
+                            paddingAngle={2} dataKey="amount">
+                            {expenseBreakdown.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                          </Pie>
+                          <Tooltip formatter={(v) => formatCurrency(Number(v))} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="flex-1 min-w-0 space-y-1">
+                      {expenseBreakdown.slice(0, 6).map((item) => (
+                        <div key={item.name} className="flex items-center gap-2 text-xs">
+                          <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                          <span className="truncate text-slate-600 flex-1">{item.name}</span>
+                          <span className="font-semibold text-slate-700">{item.percentage.toFixed(0)}%</span>
+                        </div>
+                      ))}
+                      {expenseBreakdown.length > 6 && <p className="text-xs text-slate-400">+{expenseBreakdown.length - 6} outras</p>}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Top clientes */}
+          {topClients.length > 0 && (
+            <Card className="border border-slate-100 shadow-sm">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-sm font-semibold text-slate-700">Top 5 clientes do período</h2>
+                  <Link href="/reports" className="text-xs text-emerald-700 hover:underline">Ver mais →</Link>
+                </div>
+                <div className="divide-y divide-slate-100">
+                  {topClients.map((c, idx) => (
+                    <div key={c.name} className="flex items-center gap-3 py-2.5">
+                      <span className="text-xs text-slate-400 font-mono w-6 shrink-0">#{idx + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-slate-700 truncate">{c.name}</p>
+                        <p className="text-xs text-slate-400">
+                          {c.count} lançamento(s){c.subcategory && ` · ${c.subcategory}`}
+                        </p>
+                      </div>
+                      <p className="text-sm font-semibold text-emerald-700 shrink-0">{formatCurrency(c.amount)}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Atalhos */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+            <Link href="/a-cobrar"><Button variant="outline" className="w-full justify-start gap-2 h-10">
+              <AlertCircle className="h-4 w-4 text-amber-600" />A Cobrar<ChevronRight className="h-3 w-3 ml-auto" />
+            </Button></Link>
+            <Link href="/previsao"><Button variant="outline" className="w-full justify-start gap-2 h-10">
+              <Target className="h-4 w-4 text-blue-600" />Previsão<ChevronRight className="h-3 w-3 ml-auto" />
+            </Button></Link>
+            <Link href="/reports"><Button variant="outline" className="w-full justify-start gap-2 h-10">
+              <Briefcase className="h-4 w-4 text-purple-600" />Relatórios<ChevronRight className="h-3 w-3 ml-auto" />
+            </Button></Link>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+interface KPICardProps {
+  label: string
+  value: number
+  delta: number
+  prevLabel: string
+  prevValue: number
+  color: 'emerald' | 'red' | 'blue'
+  icon: React.ReactNode
+  invertDelta?: boolean
+}
+
+function KPICard({ label, value, delta, prevLabel, prevValue, color, icon, invertDelta }: KPICardProps) {
+  const palette: Record<string, { bg: string; border: string; text: string; deltaUp: string; deltaDown: string }> = {
+    emerald: { bg: 'bg-emerald-50', border: 'border-emerald-100', text: 'text-emerald-700', deltaUp: 'text-emerald-700', deltaDown: 'text-red-700' },
+    red:     { bg: 'bg-red-50',     border: 'border-red-100',     text: 'text-red-700',     deltaUp: 'text-red-700',     deltaDown: 'text-emerald-700' },
+    blue:    { bg: 'bg-blue-50',    border: 'border-blue-100',    text: 'text-blue-700',    deltaUp: 'text-emerald-700', deltaDown: 'text-red-700' },
+  }
+  const p = palette[color]
+  const positiveDelta = invertDelta ? delta < 0 : delta > 0
+  const deltaClass = positiveDelta ? p.deltaUp : p.deltaDown
+  const DeltaIcon = delta >= 0 ? ArrowUpRight : ArrowDownRight
+
+  return (
+    <Card className={`border ${p.border} ${p.bg} shadow-sm`}>
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between mb-1">
+          <span className={`text-xs ${p.text} font-medium`}>{label}</span>
+          <span className={p.text}>{icon}</span>
+        </div>
+        <p className={`text-2xl font-bold ${p.text}`}>{formatCurrency(value)}</p>
+        {prevValue > 0 ? (
+          <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+            <DeltaIcon className={`h-3 w-3 ${deltaClass}`} />
+            <span className={deltaClass}>{Math.abs(delta).toFixed(0)}%</span>
+            <span>vs {prevLabel}</span>
+          </p>
+        ) : (
+          <p className="text-xs text-slate-400 mt-1">sem comparativo</p>
+        )}
+      </CardContent>
+    </Card>
+  )
+}

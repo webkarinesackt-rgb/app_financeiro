@@ -6,11 +6,12 @@ import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { LayoutDashboard, ArrowLeftRight, BarChart3, Settings, TrendingUp, LogOut, ChevronDown, CalendarCheck, Handshake, PiggyBank, LineChart, AlertCircle, Sparkles } from 'lucide-react'
+import { LayoutDashboard, ArrowLeftRight, BarChart3, Settings, TrendingUp, LogOut, ChevronDown, CalendarCheck, Handshake, PiggyBank, LineChart, AlertCircle, Sparkles, Activity } from 'lucide-react'
 import { toast } from 'sonner'
 import { useState } from 'react'
 
 const navItems = [
+  { href: '/panorama', label: 'Panorama', icon: Activity },
   { href: '/dashboard', label: 'Visão Geral', icon: LayoutDashboard },
   { href: '/transactions', label: 'Lançamentos', icon: ArrowLeftRight },
   { href: '/a-cobrar', label: 'A Cobrar', icon: AlertCircle },
