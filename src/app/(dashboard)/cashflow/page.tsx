@@ -122,7 +122,7 @@ function CashFlowContent() {
                   <TrendingUp className="h-4 w-4 text-emerald-600" />
                   <p className="text-xs font-medium text-emerald-600">Total Receitas</p>
                 </div>
-                <p className="text-xl font-bold text-emerald-700">{formatCurrency(income)}</p>
+                <p className="text-base sm:text-xl font-bold text-emerald-700 break-words">{formatCurrency(income)}</p>
                 {incomePct !== null && (
                   <p className={`text-xs mt-1 ${incomePct >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                     {incomePct >= 0 ? '▲' : '▼'} {Math.abs(incomePct).toFixed(1)}% vs mês anterior
@@ -137,7 +137,7 @@ function CashFlowContent() {
                   <TrendingDown className="h-4 w-4 text-red-500" />
                   <p className="text-xs font-medium text-red-500">Total Despesas</p>
                 </div>
-                <p className="text-xl font-bold text-red-600">{formatCurrency(expenses)}</p>
+                <p className="text-base sm:text-xl font-bold text-red-600 break-words">{formatCurrency(expenses)}</p>
                 {expensesPct !== null && (
                   <p className={`text-xs mt-1 ${expensesPct <= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                     {expensesPct >= 0 ? '▲' : '▼'} {Math.abs(expensesPct).toFixed(1)}% vs mês anterior
@@ -152,7 +152,7 @@ function CashFlowContent() {
                   <Wallet className={`h-4 w-4 ${balance >= 0 ? 'text-blue-600' : 'text-red-500'}`} />
                   <p className={`text-xs font-medium ${balance >= 0 ? 'text-blue-600' : 'text-red-500'}`}>Saldo do Mês</p>
                 </div>
-                <p className={`text-xl font-bold ${balance >= 0 ? 'text-blue-700' : 'text-red-600'}`}>{formatCurrency(balance)}</p>
+                <p className={`text-base sm:text-xl font-bold break-words ${balance >= 0 ? 'text-blue-700' : 'text-red-600'}`}>{formatCurrency(balance)}</p>
                 {prevBalance !== 0 && (
                   <p className="text-xs text-slate-400 mt-1">Anterior: {formatCurrency(prevBalance)}</p>
                 )}
@@ -165,7 +165,7 @@ function CashFlowContent() {
                   <Clock className="h-4 w-4 text-amber-600" />
                   <p className="text-xs font-medium text-amber-600">A Receber</p>
                 </div>
-                <p className="text-xl font-bold text-amber-700">{formatCurrency(actualIncome)}</p>
+                <p className="text-base sm:text-xl font-bold text-amber-700 break-words">{formatCurrency(actualIncome)}</p>
                 {receivablesTotal > 0 && (
                   <p className="text-xs text-amber-500 mt-1">+{formatCurrency(receivablesTotal)} previsto</p>
                 )}

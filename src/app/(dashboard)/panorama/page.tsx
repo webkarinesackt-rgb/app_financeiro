@@ -228,7 +228,7 @@ export default function PanoramaPage() {
                   <span className="text-xs text-amber-600 font-medium">Margem</span>
                   <Target className="h-4 w-4 text-amber-600" />
                 </div>
-                <p className="text-2xl font-bold text-slate-800">{margem.toFixed(1)}%</p>
+                <p className="text-lg sm:text-2xl font-bold text-slate-800">{margem.toFixed(1)}%</p>
                 <p className="text-xs text-slate-400 mt-1">
                   R$ {formatCurrency(lucro).replace('R$', '').trim()} de R$ {formatCurrency(income).replace('R$', '').trim()}
                 </p>
@@ -247,7 +247,7 @@ export default function PanoramaPage() {
                   </div>
                   <Link href="/previsao" className="text-xs text-emerald-700 hover:underline">Ver →</Link>
                 </div>
-                <p className="text-2xl font-bold text-emerald-700">{formatCurrency(mrr)} <span className="text-sm font-normal text-slate-500">/ mês</span></p>
+                <p className="text-lg sm:text-2xl font-bold text-emerald-700 break-words">{formatCurrency(mrr)} <span className="text-sm font-normal text-slate-500">/ mês</span></p>
                 <p className="text-xs text-slate-500 mt-1">
                   {recurringClients.filter((c) => c.active).length} cliente(s) ativo(s) · ARR projetado {formatCurrency(arr)}
                 </p>
@@ -263,7 +263,7 @@ export default function PanoramaPage() {
                   </div>
                   <Link href="/previsao" className="text-xs text-red-700 hover:underline">Ver →</Link>
                 </div>
-                <p className="text-2xl font-bold text-red-700">{formatCurrency(monthlyFixedCosts)} <span className="text-sm font-normal text-slate-500">/ mês</span></p>
+                <p className="text-lg sm:text-2xl font-bold text-red-700 break-words">{formatCurrency(monthlyFixedCosts)} <span className="text-sm font-normal text-slate-500">/ mês</span></p>
                 <p className="text-xs text-slate-500 mt-1">
                   Equipe + Ferramentas + Infra · projeção anual {formatCurrency(monthlyFixedCosts * 12)}
                 </p>
@@ -415,7 +415,7 @@ function KPICard({ label, value, delta, prevLabel, prevValue, color, icon, inver
           <span className={`text-xs ${p.text} font-medium`}>{label}</span>
           <span className={p.text}>{icon}</span>
         </div>
-        <p className={`text-2xl font-bold ${p.text}`}>{formatCurrency(value)}</p>
+        <p className={`text-lg sm:text-2xl font-bold ${p.text} break-words`}>{formatCurrency(value)}</p>
         {prevValue > 0 ? (
           <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
             <DeltaIcon className={`h-3 w-3 ${deltaClass}`} />

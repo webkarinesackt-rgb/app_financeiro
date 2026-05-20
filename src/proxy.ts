@@ -33,6 +33,32 @@ export async function proxy(request: NextRequest) {
   const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/register')
   const isApiRoute = pathname.startsWith('/api/')
 
+  // ─── Whitelist de e-mails autorizados ──────────────────────────────
+  // Mesmo que alguém consiga criar conta no Supabase, só os e-mails da
+  // lista abaixo conseguem entrar no app. Se você precisar autorizar
+  // outro e-mail, adicione aqui (ou via env var ALLOWED_EMAILS).
+  const allowedFromEnv = (process.env.ALLOWED_EMAILS ?? '')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean)
+  const allowedEmails = new Set<string>([
+    'webkarinesackt@gmail.com',
+    'fysilabdigital@gmail.com',
+    ...allowedFromEnv,
+  ])
+
+  if (user && !isAuthPage && !isApiRoute) {
+    const email = (user.email ?? '').toLowerCase()
+    if (!allowedEmails.has(email)) {
+      // E-mail não autorizado: faz logout e manda pra login com mensagem
+      await supabase.auth.signOut()
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      url.searchParams.set('error', 'not_allowed')
+      return NextResponse.redirect(url)
+    }
+  }
+
   if (!user && !isAuthPage && !isApiRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'

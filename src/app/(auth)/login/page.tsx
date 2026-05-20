@@ -1,8 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,11 +10,19 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { TrendingUp, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const notAllowed = searchParams.get('error') === 'not_allowed'
+
+  useEffect(() => {
+    if (notAllowed) {
+      toast.error('Acesso negado', { description: 'Este e-mail não está autorizado.' })
+    }
+  }, [notAllowed])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -87,16 +94,21 @@ export default function LoginPage() {
                 {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                 {loading ? 'Entrando...' : 'Entrar'}
               </Button>
-              <p className="text-sm text-slate-500 text-center">
-                Não tem uma conta?{' '}
-                <Link href="/register" className="text-emerald-600 hover:underline font-medium">
-                  Criar conta
-                </Link>
+              <p className="text-xs text-slate-400 text-center">
+                App privado · Apenas usuários autorizados
               </p>
             </CardFooter>
           </form>
         </Card>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginContent />
+    </Suspense>
   )
 }
