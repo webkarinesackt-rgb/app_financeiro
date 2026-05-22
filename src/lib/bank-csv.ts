@@ -213,13 +213,22 @@ export function parseBankCsv(text: string): CsvParseResult {
   // (em faturas Inter, "Descricao" é coluna-resumo vazia e "Lançamento" tem o lojista)
   const headers = parseCsvLine(lines[headerIdx], delimiter).map(norm)
   const lancIdx = headers.findIndex((h) => /^lancamento$/.test(h))
-  const descGenericIdx = headers.findIndex((h) =>
-    /^descric|^descricao|historico|memo|detalhes/.test(h)
-  )
+  const descricaoIdx = headers.findIndex((h) => /^descric/.test(h))
+  const historicoIdx = headers.findIndex((h) => /historic/.test(h))
+  const memoIdx = headers.findIndex((h) => /memo|detalhes/.test(h))
+  // Coluna do "nome" do lançamento. Prioridade: Lançamento (faturas Inter) >
+  // Descrição (extrato de conta — traz o nome do pagador/recebedor) >
+  // Histórico > memo. Antes a regex casava "Histórico" antes de "Descrição",
+  // então o nome do pagamento se perdia (importava só "Pix enviado").
+  const descGenericIdx =
+    lancIdx !== -1 ? lancIdx
+    : descricaoIdx !== -1 ? descricaoIdx
+    : historicoIdx !== -1 ? historicoIdx
+    : memoIdx
   const idx = {
     date: headers.findIndex((h) => /\bdata\b/.test(h)),
-    description: lancIdx !== -1 ? lancIdx : descGenericIdx,
-    history: headers.findIndex((h) => /historic/.test(h)),
+    description: descGenericIdx,
+    history: historicoIdx,
     amount: headers.findIndex((h) => /\bvalor\b/.test(h)),
     balance: headers.findIndex((h) => /saldo/.test(h)),
     type: headers.findIndex((h) => /^tipo$|tipo lan|tipo de lan|d\/c|debito\/credito/.test(h)),
@@ -270,11 +279,12 @@ export function parseBankCsv(text: string): CsvParseResult {
 
     const amount = Math.abs(rawAmount)
 
-    // Descrição: combina histórico + descrição se ambos existem
+    // Descrição: combina histórico ("Pix enviado") + descrição ("Andrei Da
+    // Silva"). Dedup: se as duas colunas forem a mesma, não duplica.
     const histPart = idx.history !== -1 ? (row[idx.history] ?? '').trim() : ''
     const descPart = idx.description !== -1 ? (row[idx.description] ?? '').trim() : ''
-    let description = [histPart, descPart].filter(Boolean).join(' · ').trim()
-    if (!description) description = histPart || descPart || 'Sem descrição'
+    let description = [...new Set([histPart, descPart].filter(Boolean))].join(' · ').trim()
+    if (!description) description = 'Sem descrição'
 
     const isPayment = format === 'card_invoice' && isCardPaymentLine(description)
 
