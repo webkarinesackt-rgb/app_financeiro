@@ -16,7 +16,7 @@ import { getTransactions } from '@/lib/transactions'
 import { getRecurringClients, sumMonthlyRecurringRevenue } from '@/lib/recurring-clients'
 import { getFixedCosts, sumMonthlyFixedCosts } from '@/lib/fixed-costs'
 import { formatCurrency, getMonthName } from '@/lib/format'
-import { getTrendMonths, getYearToDateMonths, yearToDateLabel } from '@/lib/panorama'
+import { getTrendMonths, getYearToDateMonths, yearToDateLabel, splitExpensesByOrigin } from '@/lib/panorama'
 import type { Transaction, RecurringClient, FixedCost } from '@/types'
 
 const PROJECT_COLORS: Record<string, string> = {
@@ -164,6 +164,14 @@ export default function PanoramaPage() {
       color: EXPENSE_COLORS[name] ?? '#94a3b8',
     }))
     .sort((a, b) => b.amount - a.amount)
+
+  // Despesa por origem: cartão / conta / Asaas
+  const originSplit = splitExpensesByOrigin(currentTx)
+  const originRows = [
+    { label: 'Cartão de crédito', value: originSplit.card, color: '#8b5cf6' },
+    { label: 'Conta bancária', value: originSplit.account, color: '#3b82f6' },
+    { label: 'Asaas', value: originSplit.asaas, color: '#06b6d4' },
+  ].filter((r) => r.value > 0)
 
   // Top 5 clientes por receita
   const clientsByName = currentTx
@@ -394,6 +402,36 @@ export default function PanoramaPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Despesa por origem */}
+          {originRows.length > 0 && (
+            <Card className="border border-slate-100 shadow-sm">
+              <CardContent className="p-5">
+                <h2 className="text-sm font-semibold text-slate-700 mb-3">Despesa por origem</h2>
+                <div className="space-y-2.5">
+                  {originRows.map((row) => {
+                    const pct = expense > 0 ? (row.value / expense) * 100 : 0
+                    return (
+                      <div key={row.label} className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span className="flex items-center gap-2 text-slate-600">
+                            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: row.color }} />
+                            {row.label}
+                          </span>
+                          <span className="font-semibold text-slate-700">
+                            {formatCurrency(row.value)} <span className="text-xs text-slate-400">{pct.toFixed(0)}%</span>
+                          </span>
+                        </div>
+                        <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: row.color }} />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Top clientes */}
           {topClients.length > 0 && (
