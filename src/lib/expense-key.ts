@@ -9,6 +9,14 @@
 export function extractExpenseKey(description: string): string | null {
   const d = description.trim()
 
+  // 0) Formato "Histórico · Nome" (extrato de conta importado, ex.:
+  //    "Pix enviado · Andrei Da Silva"): o nome vem depois do " · ".
+  const dotIdx = d.lastIndexOf(' · ')
+  if (dotIdx !== -1) {
+    const namePart = d.slice(dotIdx + 3).trim()
+    if (namePart) return extractExpenseKey(namePart)
+  }
+
   // 1) Pix com Cp :NNNN-Nome
   const pixMatch = d.match(/Cp\s*:[\d]+-(.+?)(\s+\d{6,}|$)/)
   if (pixMatch && pixMatch[1].trim().length >= 3) return pixMatch[1].trim()

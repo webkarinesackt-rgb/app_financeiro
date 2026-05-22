@@ -13,6 +13,11 @@ describe('extractExpenseKey', () => {
   it('devolve null para descrições muito curtas', () => {
     expect(extractExpenseKey('AB')).toBeNull()
   })
+
+  it('extrai o nome depois do separador " · " (extrato de conta)', () => {
+    expect(extractExpenseKey('Pix enviado · Andrei Da Silva 11314995901')).toBe('Andrei Da Silva')
+    expect(extractExpenseKey('Pix recebido · Cristina Bozan Zanghelini')).toBe('Cristina Bozan Zanghelini')
+  })
 })
 
 describe('buildMerchantCategoryMap / matchMerchantCategory', () => {
