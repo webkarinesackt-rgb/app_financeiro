@@ -48,6 +48,7 @@ const EXPENSE_ACTIONS: ActionDef[] = [
   { label: 'Ferramentas / Software', shortcut: '2', customCategory: 'Ferramentas', subcategory: null, color: 'bg-blue-600 hover:bg-blue-700', emoji: '🛠️' },
   { label: 'Infraestrutura', shortcut: '3', customCategory: 'Infraestrutura', subcategory: null, color: 'bg-purple-600 hover:bg-purple-700', emoji: '🖥️' },
   { label: 'Equipe', shortcut: '4', customCategory: 'Equipe', subcategory: null, color: 'bg-emerald-600 hover:bg-emerald-700', emoji: '👥' },
+  { label: 'Pró-labore sócios', shortcut: 'p', customCategory: 'Pro-labore sócios', subcategory: null, color: 'bg-teal-700 hover:bg-teal-800', emoji: '🤝' },
   { label: 'Cursos / Treinamentos', shortcut: '5', customCategory: 'Cursos / Treinamentos', subcategory: null, color: 'bg-indigo-600 hover:bg-indigo-700', emoji: '🎓' },
   { label: 'Contabilidade / Jurídico', shortcut: '6', customCategory: 'Contabilidade', subcategory: null, color: 'bg-cyan-600 hover:bg-cyan-700', emoji: '📊' },
   { label: 'Impostos', shortcut: '7', customCategory: 'Impostos', subcategory: null, color: 'bg-amber-600 hover:bg-amber-700', emoji: '🧾' },
