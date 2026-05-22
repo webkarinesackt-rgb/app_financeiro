@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { TrendingUp, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
+import { Logo } from '@/components/brand/logo'
 import { toast } from 'sonner'
 
 function LoginContent() {
@@ -43,29 +44,29 @@ function LoginContent() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
-      <div className="w-full max-w-md space-y-6">
-        <div className="flex flex-col items-center gap-2 text-center">
-          <div className="flex items-center gap-2">
-            <div className="rounded-xl bg-emerald-600 p-2">
-              <TrendingUp className="h-6 w-6 text-white" />
-            </div>
-            <span className="text-2xl font-bold text-slate-800">FinançasPRO</span>
+    <div className="min-h-screen flex items-center justify-center bg-canvas p-4">
+      <div className="w-full max-w-sm space-y-8">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <Logo size="lg" showText={false} />
+          <div className="mt-1">
+            <h1 className="font-display text-4xl text-stone-900 tracking-tight leading-none">
+              Fysi<span className="text-[color:var(--brand)]">.</span>
+            </h1>
+            <p className="eyebrow text-stone-500 mt-2">finanças privado</p>
           </div>
-          <p className="text-slate-500 text-sm">Controle suas finanças com simplicidade</p>
         </div>
 
-        <Card className="shadow-lg border-0">
-          <CardHeader className="space-y-1 pb-4">
-            <CardTitle className="text-xl text-center">Entrar na conta</CardTitle>
-            <CardDescription className="text-center">
-              Digite seu email e senha para acessar
+        <Card className="border-stone-200/60 shadow-xl shadow-stone-900/5 bg-white/95 backdrop-blur-sm">
+          <CardHeader className="space-y-1 pb-3">
+            <CardTitle className="font-display text-2xl text-center text-stone-900">Entrar</CardTitle>
+            <CardDescription className="text-center text-stone-500 text-sm">
+              Acesse sua conta autorizada
             </CardDescription>
           </CardHeader>
           <form onSubmit={handleLogin}>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="email" className="text-xs uppercase tracking-wider text-stone-600 font-semibold">E-mail</Label>
                 <Input
                   id="email"
                   type="email"
@@ -74,10 +75,11 @@ function LoginContent() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   autoComplete="email"
+                  className="h-11"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="password" className="text-xs uppercase tracking-wider text-stone-600 font-semibold">Senha</Label>
                 <Input
                   id="password"
                   type="password"
@@ -86,20 +88,24 @@ function LoginContent() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   autoComplete="current-password"
+                  className="h-11"
                 />
               </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-3 pt-2">
-              <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700" disabled={loading}>
+              <Button type="submit"
+                className="w-full h-11 bg-stone-900 hover:bg-stone-800 text-white font-medium tracking-wide"
+                disabled={loading}>
                 {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                {loading ? 'Entrando...' : 'Entrar'}
+                {loading ? 'Entrando' : 'Entrar'}
               </Button>
-              <p className="text-xs text-slate-400 text-center">
-                App privado · Apenas usuários autorizados
-              </p>
             </CardFooter>
           </form>
         </Card>
+
+        <p className="text-[11px] text-stone-400 text-center tracking-wide">
+          ACESSO RESTRITO · APENAS USUÁRIOS AUTORIZADOS
+        </p>
       </div>
     </div>
   )

@@ -169,10 +169,11 @@ export default function PanoramaPage() {
 
   return (
     <div className="space-y-5 max-w-5xl">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Panorama</h1>
-          <p className="text-slate-500 text-sm mt-0.5 capitalize">{periodLabel}</p>
+          <p className="eyebrow text-stone-500 mb-1">Visão Geral</p>
+          <h1 className="font-display text-4xl sm:text-5xl text-stone-900 tracking-tight leading-none">Panorama</h1>
+          <p className="text-stone-500 text-sm mt-2 capitalize italic font-display">{periodLabel}</p>
         </div>
         <div className="inline-flex rounded-lg bg-slate-100 p-0.5 text-xs">
           <button onClick={() => setPeriod('month')}
@@ -228,7 +229,7 @@ export default function PanoramaPage() {
                   <span className="text-xs text-amber-600 font-medium">Margem</span>
                   <Target className="h-4 w-4 text-amber-600" />
                 </div>
-                <p className="text-lg sm:text-2xl font-bold text-slate-800">{margem.toFixed(1)}%</p>
+                <p className="display-num text-2xl sm:text-3xl text-stone-800">{margem.toFixed(1)}<span className="text-base ml-0.5 text-stone-400">%</span></p>
                 <p className="text-xs text-slate-400 mt-1">
                   R$ {formatCurrency(lucro).replace('R$', '').trim()} de R$ {formatCurrency(income).replace('R$', '').trim()}
                 </p>
@@ -247,7 +248,7 @@ export default function PanoramaPage() {
                   </div>
                   <Link href="/previsao" className="text-xs text-emerald-700 hover:underline">Ver →</Link>
                 </div>
-                <p className="text-lg sm:text-2xl font-bold text-emerald-700 break-words">{formatCurrency(mrr)} <span className="text-sm font-normal text-slate-500">/ mês</span></p>
+                <p className="display-num text-2xl sm:text-3xl text-emerald-800 break-words">{formatCurrency(mrr)} <span className="text-xs font-normal text-stone-500 ml-1 not-italic">/ mês</span></p>
                 <p className="text-xs text-slate-500 mt-1">
                   {recurringClients.filter((c) => c.active).length} cliente(s) ativo(s) · ARR projetado {formatCurrency(arr)}
                 </p>
@@ -263,7 +264,7 @@ export default function PanoramaPage() {
                   </div>
                   <Link href="/previsao" className="text-xs text-red-700 hover:underline">Ver →</Link>
                 </div>
-                <p className="text-lg sm:text-2xl font-bold text-red-700 break-words">{formatCurrency(monthlyFixedCosts)} <span className="text-sm font-normal text-slate-500">/ mês</span></p>
+                <p className="display-num text-2xl sm:text-3xl text-red-800 break-words">{formatCurrency(monthlyFixedCosts)} <span className="text-xs font-normal text-stone-500 ml-1 not-italic">/ mês</span></p>
                 <p className="text-xs text-slate-500 mt-1">
                   Equipe + Ferramentas + Infra · projeção anual {formatCurrency(monthlyFixedCosts * 12)}
                 </p>
@@ -415,7 +416,7 @@ function KPICard({ label, value, delta, prevLabel, prevValue, color, icon, inver
           <span className={`text-xs ${p.text} font-medium`}>{label}</span>
           <span className={p.text}>{icon}</span>
         </div>
-        <p className={`text-lg sm:text-2xl font-bold ${p.text} break-words`}>{formatCurrency(value)}</p>
+        <p className={`display-num text-2xl sm:text-3xl ${p.text} break-words tracking-tight`}>{formatCurrency(value)}</p>
         {prevValue > 0 ? (
           <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
             <DeltaIcon className={`h-3 w-3 ${deltaClass}`} />

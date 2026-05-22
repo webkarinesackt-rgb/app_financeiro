@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Geist } from 'next/font/google'
+import { Geist, Fraunces } from 'next/font/google'
 import './globals.css'
 import { Toaster } from '@/components/ui/sonner'
 
@@ -8,15 +8,22 @@ const geist = Geist({
   subsets: ['latin'],
 })
 
+const fraunces = Fraunces({
+  variable: '--font-display',
+  subsets: ['latin'],
+  axes: ['SOFT', 'WONK', 'opsz'],
+  style: ['normal', 'italic'],
+})
+
 export const metadata: Metadata = {
-  title: 'FinançasPRO — Controle Financeiro Pessoal',
-  description: 'Gerencie suas finanças pessoais de forma simples e visual.',
+  title: 'Fysi Finanças',
+  description: 'Controle financeiro da Fysi Lab.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" className={`${geist.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col font-sans bg-slate-50">
+    <html lang="pt-BR" className={`${geist.variable} ${fraunces.variable} h-full antialiased`}>
+      <body className="min-h-full flex flex-col font-sans bg-canvas">
         {children}
         <Toaster richColors position="top-right" />
       </body>

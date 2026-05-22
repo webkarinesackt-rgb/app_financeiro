@@ -6,8 +6,9 @@ import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, ArrowLeftRight, BarChart3,
-  Settings, TrendingUp, LogOut, Plus, Handshake, PiggyBank, LineChart,
+  Settings, LogOut, Plus, Handshake, PiggyBank, LineChart,
 } from 'lucide-react'
+import { Logo } from '@/components/brand/logo'
 import { toast } from 'sonner'
 import { useState } from 'react'
 import { TransactionForm } from '@/components/transactions/transaction-form'
@@ -37,17 +38,12 @@ export function MobileNav() {
   return (
     <>
       {/* Header */}
-      <header className="md:hidden sticky top-0 z-40 flex items-center justify-between px-4 h-14 bg-white/80 backdrop-blur-md border-b border-slate-100">
-        <div className="flex items-center gap-2.5">
-          <div className="rounded-xl bg-emerald-600 p-1.5 shadow-sm shadow-emerald-200">
-            <TrendingUp className="h-4 w-4 text-white" />
-          </div>
-          <span className="text-[15px] font-bold tracking-tight text-slate-800">FinançasPRO</span>
-        </div>
+      <header className="md:hidden sticky top-0 z-40 flex items-center justify-between px-4 h-14 bg-white/80 backdrop-blur-md border-b border-stone-200/60">
+        <Logo size="sm" />
         <div className="flex items-center gap-2">
           <button
             onClick={handleLogout}
-            className="flex items-center justify-center h-8 w-8 rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all"
+            className="flex items-center justify-center h-8 w-8 rounded-full text-stone-400 hover:text-red-500 hover:bg-red-50 transition-all"
             title="Sair"
           >
             <LogOut className="h-4 w-4" />
@@ -60,7 +56,7 @@ export function MobileNav() {
         className="md:hidden fixed bottom-0 left-0 right-0 z-50"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
-        <div className="mx-3 mb-2 rounded-2xl bg-slate-900/95 backdrop-blur-xl shadow-2xl shadow-slate-900/30 border border-white/5">
+        <div className="mx-3 mb-2 rounded-2xl bg-stone-900/95 backdrop-blur-xl shadow-2xl shadow-stone-900/30 border border-white/5">
           <div className="flex items-center h-16 px-1">
             {/* First 2 items */}
             {navItems.slice(0, 2).map((item) => (
@@ -71,7 +67,7 @@ export function MobileNav() {
             <div className="flex-shrink-0 px-2">
               <button
                 onClick={() => setShowForm(true)}
-                className="flex flex-col items-center justify-center h-12 w-12 rounded-2xl bg-emerald-500 shadow-lg shadow-emerald-500/40 active:scale-95 transition-transform"
+                className="flex flex-col items-center justify-center h-12 w-12 rounded-2xl bg-[color:var(--brand)] shadow-lg shadow-[color:var(--brand)]/40 active:scale-95 transition-transform"
               >
                 <Plus className="h-6 w-6 text-white" strokeWidth={2.5} />
               </button>
