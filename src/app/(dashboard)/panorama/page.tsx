@@ -4,7 +4,10 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
+import {
+  PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend,
+} from 'recharts'
 import {
   TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
   Wallet, Target, Repeat, Briefcase, AlertCircle, ChevronRight,
@@ -13,7 +16,7 @@ import { getTransactions } from '@/lib/transactions'
 import { getRecurringClients, sumMonthlyRecurringRevenue } from '@/lib/recurring-clients'
 import { getFixedCosts, sumMonthlyFixedCosts } from '@/lib/fixed-costs'
 import { formatCurrency, getMonthName } from '@/lib/format'
-import { getYearToDateMonths, yearToDateLabel } from '@/lib/panorama'
+import { getTrendMonths, getYearToDateMonths, yearToDateLabel } from '@/lib/panorama'
 import type { Transaction, RecurringClient, FixedCost } from '@/types'
 
 const PROJECT_COLORS: Record<string, string> = {
@@ -49,6 +52,8 @@ export default function PanoramaPage() {
   const [recurringClients, setRecurringClients] = useState<RecurringClient[]>([])
   const [fixedCosts, setFixedCosts] = useState<FixedCost[]>([])
   const [loading, setLoading] = useState(true)
+  const [monthsBack, setMonthsBack] = useState<6 | 12>(6)
+  const [trend, setTrend] = useState<{ name: string; receita: number; despesa: number; lucro: number }[]>([])
 
   const now = new Date()
   const month = now.getMonth() + 1
@@ -89,6 +94,22 @@ export default function PanoramaPage() {
   }, [period, month, year, prevMonth, prevYear])
 
   useEffect(() => { fetchData() }, [fetchData])
+
+  useEffect(() => {
+    const months = getTrendMonths(new Date(), monthsBack)
+    Promise.all(months.map((m) => getTransactions({ month: m.month, year: m.year })))
+      .then((results) => {
+        setTrend(results.map((txs, i) => {
+          const receita = txs.filter((t) => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0)
+          const despesa = txs.filter((t) => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0)
+          return {
+            name: getMonthName(months[i].month).slice(0, 3).toUpperCase(),
+            receita, despesa, lucro: receita - despesa,
+          }
+        }))
+      })
+      .catch(() => {})
+  }, [monthsBack])
 
   // KPIs principais
   const income = currentTx.filter((t) => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0)
@@ -271,6 +292,37 @@ export default function PanoramaPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Evolução / tendência */}
+          <Card className="border border-slate-100 shadow-sm">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-semibold text-slate-700">Evolução</h2>
+                <div className="inline-flex rounded-lg bg-slate-100 p-0.5 text-xs">
+                  <button onClick={() => setMonthsBack(6)}
+                    className={`px-2.5 py-1 rounded-md font-medium ${monthsBack === 6 ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>
+                    6 meses
+                  </button>
+                  <button onClick={() => setMonthsBack(12)}
+                    className={`px-2.5 py-1 rounded-md font-medium ${monthsBack === 12 ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>
+                    12 meses
+                  </button>
+                </div>
+              </div>
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={trend} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
+                  <Tooltip formatter={(v) => formatCurrency(Number(v))} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Bar dataKey="receita" name="Receita" fill="#10b981" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="despesa" name="Despesa" fill="#f43f5e" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="lucro" name="Lucro" fill="#3b82f6" radius={[3, 3, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
 
           {/* Breakdowns */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
