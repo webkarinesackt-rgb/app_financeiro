@@ -261,6 +261,17 @@ export async function deleteTransactions(ids: string[]): Promise<void> {
   if (error) throw error
 }
 
+// Aplica uma custom_category a várias transações de uma vez (seleção em massa).
+export async function categorizeTransactions(ids: string[], customCategory: string): Promise<void> {
+  if (ids.length === 0) return
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('transactions')
+    .update({ category: 'custom', custom_category: customCategory, updated_at: new Date().toISOString() })
+    .in('id', ids)
+  if (error) throw error
+}
+
 // Para uma lista de descrições de despesa, devolve um mapa
 // descrição -> categoria inferida, com base em despesas já categorizadas
 // do mesmo lojista. Faz uma única consulta ao banco.

@@ -13,11 +13,18 @@ import {
 } from '@/components/ui/dialog'
 import { MoreVertical, Pencil, Trash2, TrendingUp, TrendingDown, RefreshCw, Wallet, CreditCard as CardIcon, CheckSquare, Square } from 'lucide-react'
 import { toast } from 'sonner'
-import { deleteTransaction, deleteTransactions } from '@/lib/transactions'
+import { deleteTransaction, deleteTransactions, categorizeTransactions } from '@/lib/transactions'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { getCategoryLabel, getBankColor, RECURRENCE_LABELS } from '@/types'
 import { TransactionForm } from './transaction-form'
 import type { Transaction, Account, CreditCard } from '@/types'
+
+// Categorias oferecidas na recategorização em massa.
+const BULK_CATEGORIES = [
+  'Pró-labore sócios', 'Equipe', 'Marketing', 'Ferramentas', 'Infraestrutura',
+  'Cursos / Treinamentos', 'Contabilidade', 'Impostos', 'Encargos financeiros',
+  'Alimentação', 'Outros',
+]
 
 interface TransactionListProps {
   transactions: Transaction[]
@@ -95,6 +102,20 @@ export function TransactionList({ transactions, accounts = [], cards = [], onRef
     }
   }
 
+  async function handleBulkCategorize(customCategory: string) {
+    setDeleteLoading(true)
+    try {
+      await categorizeTransactions(selectedIds, customCategory)
+      toast.success(`${selectedIds.length} transação(ões) → ${customCategory}`)
+      setSelected(new Set())
+      onRefresh()
+    } catch {
+      toast.error('Erro ao categorizar transações')
+    } finally {
+      setDeleteLoading(false)
+    }
+  }
+
   if (transactions.length === 0) {
     return (
       <Card className="border border-slate-100 shadow-sm">
@@ -121,11 +142,26 @@ export function TransactionList({ transactions, accounts = [], cards = [], onRef
               </span>
             </button>
             {selectedIds.length > 0 && (
-              <Button variant="destructive" size="sm" className="h-7 text-xs gap-1.5"
-                onClick={() => setBulkDeleteOpen(true)}>
-                <Trash2 className="h-3.5 w-3.5" />
-                Excluir selecionadas
-              </Button>
+              <div className="flex items-center gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50">
+                    <Pencil className="h-3.5 w-3.5" />
+                    Categorizar
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {BULK_CATEGORIES.map((c) => (
+                      <DropdownMenuItem key={c} onClick={() => handleBulkCategorize(c)}>
+                        {c}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button variant="destructive" size="sm" className="h-7 text-xs gap-1.5"
+                  onClick={() => setBulkDeleteOpen(true)}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Excluir
+                </Button>
+              </div>
             )}
           </div>
           <div className="divide-y divide-slate-50">
