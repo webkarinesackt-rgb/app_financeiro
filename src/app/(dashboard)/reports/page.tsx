@@ -51,12 +51,8 @@ function ReportsContent() {
   const expensesByCat = transactions
     .filter((t) => t.type === 'expense')
     .reduce<Record<string, { amount: number; label: string }>>((acc, t) => {
-      // Pró-labore quebra por sócio (subcategoria Karine / Andrei).
-      const isProLabore = t.category === 'custom' && t.custom_category === 'Pró-labore'
-      const key = isProLabore
-        ? `Pró-labore · ${t.subcategory ?? 'sócios'}`
-        : t.category === 'custom' ? (t.custom_category ?? 'custom') : t.category
-      const label = isProLabore ? key : getCategoryLabel(t.category as Category, t.custom_category)
+      const key = t.category === 'custom' ? (t.custom_category ?? 'custom') : t.category
+      const label = getCategoryLabel(t.category as Category, t.custom_category)
       acc[key] = { amount: (acc[key]?.amount ?? 0) + t.amount, label }
       return acc
     }, {})

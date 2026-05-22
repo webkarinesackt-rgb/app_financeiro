@@ -151,10 +151,7 @@ export default function PanoramaPage() {
   const expenseByType = currentTx
     .filter((t) => t.type === 'expense')
     .reduce<Record<string, number>>((acc, t) => {
-      // Pró-labore quebra por sócio (subcategoria Karine / Andrei).
-      const key = t.custom_category === 'Pró-labore'
-        ? `Pró-labore · ${t.subcategory ?? 'sócios'}`
-        : (t.custom_category ?? t.category ?? 'Outros')
+      const key = t.custom_category ?? t.category ?? 'Outros'
       acc[key] = (acc[key] ?? 0) + Number(t.amount)
       return acc
     }, {})
