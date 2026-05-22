@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Loader2, Send, Bot, User, CheckSquare, Square, TrendingUp, TrendingDown, CheckCheck, Trash2, Wallet, Info, Upload } from 'lucide-react'
 import { toast } from 'sonner'
-import { createTransaction } from '@/lib/transactions'
+import { createTransaction, inferCategoriesFromHistory } from '@/lib/transactions'
 import { getAccounts } from '@/lib/accounts'
 import { getCreditCards } from '@/lib/credit-cards'
 import { formatCurrency } from '@/lib/format'
@@ -41,6 +41,7 @@ interface ParsedTransaction {
   description: string
   date: string
   category: Category
+  custom_category?: string | null
   payment_method: PaymentMethod
   selected?: boolean
   installment_total?: number | null
@@ -84,6 +85,21 @@ export default function ImportPage() {
   const accountId = destination.startsWith('acc:') ? destination.slice(4) : ''
   const creditCardId = destination.startsWith('card:') ? destination.slice(5) : ''
 
+  // Para despesas, herda a custom_category de transações antigas do mesmo lojista.
+  async function withInferredCategories(txs: ParsedTransaction[]): Promise<ParsedTransaction[]> {
+    const expenseDescs = txs.filter((t) => t.type === 'expense').map((t) => t.description)
+    if (expenseDescs.length === 0) return txs
+    try {
+      const inferred = await inferCategoriesFromHistory(expenseDescs)
+      return txs.map((t) => {
+        const match = t.type === 'expense' ? inferred.get(t.description) : undefined
+        return match ? { ...t, category: 'custom' as Category, custom_category: match.custom_category } : t
+      })
+    } catch {
+      return txs
+    }
+  }
+
   async function handleSend() {
     if (!input.trim() || loading) return
     const statement = input.trim()
@@ -106,12 +122,13 @@ export default function ImportPage() {
         return
       }
 
-      const txs: ParsedTransaction[] = (json.transactions ?? []).map((t: ParsedTransaction) => ({
+      const rawTxs: ParsedTransaction[] = (json.transactions ?? []).map((t: ParsedTransaction) => ({
         ...t,
         // Desmarca automaticamente linhas que parecem repasse do Asaas
         // (já foram contabilizadas pela integração Asaas — evitar duplicar).
         selected: !isAsaasTransfer(t.description),
       }))
+      const txs = await withInferredCategories(rawTxs)
 
       if (txs.length === 0) {
         setMessages((prev) => [...prev, { role: 'assistant', text: 'Não encontrei transações nesse texto. Tente colar diretamente o extrato com datas e valores.' }])
@@ -146,11 +163,12 @@ export default function ImportPage() {
         return
       }
 
-      const txs: ParsedTransaction[] = result.transactions.map((t) => ({
+      const rawTxs: ParsedTransaction[] = result.transactions.map((t) => ({
         ...t,
         // Desmarca: repasses Asaas + pagamentos de fatura (em CSV de cartão)
         selected: !isAsaasTransfer(t.description) && !t.isCardPayment,
       }))
+      const txs = await withInferredCategories(rawTxs)
 
       // Auto-roteamento do destino baseado no formato detectado.
       let extraNote = ''
@@ -229,8 +247,8 @@ export default function ImportPage() {
           amount: tx.amount,
           description: tx.description,
           date: tx.date,
-          category: tx.category,
-          custom_category: null,
+          category: tx.custom_category ? 'custom' : tx.category,
+          custom_category: tx.custom_category ?? null,
           subcategory: null,
           payment_method: creditCardId ? 'credit' : tx.payment_method,
           account_id: accountId || null,
@@ -395,8 +413,8 @@ export default function ImportPage() {
                             <p className="text-xs font-medium text-slate-700 truncate">{tx.description}</p>
                             <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                               <span className="text-xs text-slate-400">{tx.date}</span>
-                              <Badge variant="outline" className="text-xs py-0 px-1.5 h-4">
-                                {CATEGORY_LABELS[tx.category] ?? tx.category}
+                              <Badge variant="outline" className={`text-xs py-0 px-1.5 h-4 ${tx.custom_category ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : ''}`}>
+                                {tx.custom_category ?? CATEGORY_LABELS[tx.category] ?? tx.category}
                               </Badge>
                               <span className="text-xs text-slate-400">
                                 {PAYMENT_METHOD_LABELS[tx.payment_method] ?? tx.payment_method}
