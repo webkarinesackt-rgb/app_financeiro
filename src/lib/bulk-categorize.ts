@@ -12,6 +12,8 @@ export interface UncategorizedClient {
   sample: string           // descrição completa de exemplo
 }
 
+export type ExpenseOrigin = 'all' | 'card' | 'account' | 'asaas'
+
 // Extrai nome do cliente da descrição. Mesma lógica usada no resto do app.
 function extractClient(description: string): string | null {
   const m1 = description.match(/^([^—]+?)\s*—/)
@@ -23,17 +25,24 @@ function extractClient(description: string): string | null {
 
 // extractExpenseKey vive em @/lib/expense-key (importado acima).
 
-// Lista DESPESAS não-categorizadas (category='other' OU sem custom_category),
-// agrupado por "nome" extraído (lojista/destinatário) da description.
-export async function getUncategorizedExpenses(fromDate?: string): Promise<UncategorizedClient[]> {
+// Lista DESPESAS sem categoria da empresa (custom_category nula), agrupadas
+// por lojista extraído da description. `origin` filtra por cartão / conta /
+// Asaas (integração).
+export async function getUncategorizedExpenses(
+  fromDate?: string,
+  origin: ExpenseOrigin = 'all',
+): Promise<UncategorizedClient[]> {
   const supabase = createClient()
   let query = supabase
     .from('transactions')
-    .select('description, amount, date, category, custom_category')
+    .select('description, amount, date, credit_card_id, integration_id')
     .eq('type', 'expense')
-    .or('category.eq.other,and(category.eq.custom,custom_category.is.null)')
+    .is('custom_category', null)
 
   if (fromDate) query = query.gte('date', fromDate)
+  if (origin === 'card') query = query.not('credit_card_id', 'is', null)
+  else if (origin === 'asaas') query = query.not('integration_id', 'is', null)
+  else if (origin === 'account') query = query.is('credit_card_id', null).is('integration_id', null)
 
   const { data, error } = await query
   if (error || !data) return []
