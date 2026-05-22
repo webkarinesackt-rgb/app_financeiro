@@ -109,8 +109,22 @@ export function TransactionForm({ open, onClose, onSuccess, transaction, default
 
   function handleCategoryChange(value: string | null) {
     if (!value) return
+    if (value === '__new__') {
+      setShowCustomInput(true)
+      setCategory('custom')
+      setCustomCategory('')
+      return
+    }
+    if (value.startsWith('custom:')) {
+      setShowCustomInput(false)
+      setCategory('custom')
+      setCustomCategory(value.slice(7))
+      setSubcategory('')
+      return
+    }
+    setShowCustomInput(false)
     setCategory(value as Category)
-    if (value !== 'custom') setCustomCategory('')
+    setCustomCategory('')
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -362,54 +376,43 @@ export function TransactionForm({ open, onClose, onSuccess, transaction, default
             </div>
           )}
 
-          {/* Categoria */}
+          {/* Categoria — suas categorias direto; padrão fica no rodapé */}
           <div className="space-y-2">
             <Label>Categoria</Label>
-            <Select value={category} onValueChange={handleCategoryChange}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Select
+              value={
+                category === 'custom'
+                  ? (showCustomInput || !customCategory ? '__new__' : `custom:${customCategory}`)
+                  : category
+              }
+              onValueChange={handleCategoryChange}
+            >
+              <SelectTrigger><SelectValue placeholder="Escolha uma categoria..." /></SelectTrigger>
               <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
-                    {cat === 'custom' ? '+ Personalizada...' : CATEGORY_LABELS[cat]}
-                  </SelectItem>
+                {existingCustoms.length > 0 && (
+                  <>
+                    <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase">Suas categorias</div>
+                    {existingCustoms.map((name) => (
+                      <SelectItem key={`custom:${name}`} value={`custom:${name}`}>{name}</SelectItem>
+                    ))}
+                  </>
+                )}
+                <SelectItem value="__new__">+ Criar nova categoria</SelectItem>
+                <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase">Padrão</div>
+                {categories.filter((c) => c !== 'custom').map((cat) => (
+                  <SelectItem key={cat} value={cat}>{CATEGORY_LABELS[cat]}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {category === 'custom' && existingCustoms.length > 0 && !showCustomInput && (
-              <Select
-                value={customCategory}
-                onValueChange={(v) => {
-                  if (v === '__new__') {
-                    setShowCustomInput(true)
-                    setCustomCategory('')
-                  } else if (v) {
-                    setCustomCategory(v)
-                    setSubcategory('')  // reset subcategory ao trocar custom
-                  }
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Escolha uma categoria existente..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {existingCustoms.map((c) => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
-                  <SelectItem value="__new__">+ Criar nova categoria...</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
 
-            {category === 'custom' && (showCustomInput || existingCustoms.length === 0) && (
+            {category === 'custom' && showCustomInput && (
               <div className="flex gap-2">
                 <Input placeholder="Nome da nova categoria"
                   value={customCategory} onChange={(e) => setCustomCategory(e.target.value)} autoFocus />
-                {existingCustoms.length > 0 && (
-                  <Button type="button" variant="ghost" size="sm" className="h-9 px-2 text-xs"
-                    onClick={() => { setShowCustomInput(false); setCustomCategory('') }}>
-                    ← Lista
-                  </Button>
-                )}
+                <Button type="button" variant="ghost" size="sm" className="h-9 px-2 text-xs"
+                  onClick={() => { setShowCustomInput(false); setCustomCategory('') }}>
+                  ← Voltar
+                </Button>
               </div>
             )}
 
