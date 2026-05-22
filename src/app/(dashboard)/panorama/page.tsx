@@ -176,6 +176,15 @@ export default function PanoramaPage() {
     { label: 'Asaas', value: originSplit.asaas, color: '#06b6d4' },
   ].filter((r) => r.value > 0)
 
+  // Pró-labore dos sócios: total + split por sócio (subcategoria)
+  const proLaboreTx = currentTx.filter((t) => t.type === 'expense' && t.custom_category === 'Pró-labore')
+  const proLabore = {
+    total: proLaboreTx.reduce((s, t) => s + Number(t.amount), 0),
+    karine: proLaboreTx.filter((t) => t.subcategory === 'Karine').reduce((s, t) => s + Number(t.amount), 0),
+    andrei: proLaboreTx.filter((t) => t.subcategory === 'Andrei').reduce((s, t) => s + Number(t.amount), 0),
+  }
+  const proLaboreSemSocio = proLabore.total - proLabore.karine - proLabore.andrei
+
   // Top 5 clientes por receita
   const clientsByName = currentTx
     .filter((t) => t.type === 'income' && t.custom_category === 'Receita Landing Page / Site')
@@ -443,6 +452,23 @@ export default function PanoramaPage() {
                     )
                   })}
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Pró-labore dos sócios */}
+          {proLabore.total > 0 && (
+            <Card className="border border-teal-100 bg-teal-50/40 shadow-sm break-inside-avoid">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Briefcase className="h-4 w-4 text-teal-700" />
+                  <span className="text-sm font-semibold text-slate-700">Pró-labore dos sócios</span>
+                </div>
+                <p className="display-num text-2xl sm:text-3xl text-teal-800 break-words">{formatCurrency(proLabore.total)}</p>
+                <p className="text-xs text-slate-500 mt-1">
+                  Karine {formatCurrency(proLabore.karine)} · Andrei {formatCurrency(proLabore.andrei)}
+                  {proLaboreSemSocio > 0.005 && <> · A separar {formatCurrency(proLaboreSemSocio)}</>}
+                </p>
               </CardContent>
             </Card>
           )}
