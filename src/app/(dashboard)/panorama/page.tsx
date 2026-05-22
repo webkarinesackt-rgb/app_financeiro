@@ -13,6 +13,7 @@ import { getTransactions } from '@/lib/transactions'
 import { getRecurringClients, sumMonthlyRecurringRevenue } from '@/lib/recurring-clients'
 import { getFixedCosts, sumMonthlyFixedCosts } from '@/lib/fixed-costs'
 import { formatCurrency, getMonthName } from '@/lib/format'
+import { getYearToDateMonths, yearToDateLabel } from '@/lib/panorama'
 import type { Transaction, RecurringClient, FixedCost } from '@/types'
 
 const PROJECT_COLORS: Record<string, string> = {
@@ -70,11 +71,10 @@ export default function PanoramaPage() {
         setRecurringClients(rc)
         setFixedCosts(fc)
       } else {
-        const monthsThisYear = Array.from({ length: 12 }, (_, i) => i + 1)
-        const monthsLastYear = Array.from({ length: 12 }, (_, i) => i + 1)
+        const ytdMonths = getYearToDateMonths(month)
         const [curResults, prevResults, rc, fc] = await Promise.all([
-          Promise.all(monthsThisYear.map((m) => getTransactions({ month: m, year }))),
-          Promise.all(monthsLastYear.map((m) => getTransactions({ month: m, year: year - 1 }))),
+          Promise.all(ytdMonths.map((m) => getTransactions({ month: m, year }))),
+          Promise.all(ytdMonths.map((m) => getTransactions({ month: m, year: year - 1 }))),
           getRecurringClients(),
           getFixedCosts(),
         ])
@@ -164,8 +164,8 @@ export default function PanoramaPage() {
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 5)
 
-  const periodLabel = period === 'month' ? `${getMonthName(month)} ${year}` : `Ano ${year}`
-  const prevPeriodLabel = period === 'month' ? getMonthName(prevMonth) : `Ano ${year - 1}`
+  const periodLabel = period === 'month' ? `${getMonthName(month)} ${year}` : yearToDateLabel(month, year)
+  const prevPeriodLabel = period === 'month' ? getMonthName(prevMonth) : yearToDateLabel(month, year - 1)
 
   return (
     <div className="space-y-5 max-w-5xl">
