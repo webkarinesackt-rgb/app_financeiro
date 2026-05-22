@@ -26,6 +26,9 @@ function isAsaasTransfer(description: string): boolean {
   // Transferências internas entre contas da Fysi
   if (/\bfysi\s?lab\b/i.test(description)) return true
   if (/fysi lab digital/i.test(description)) return true
+  // Pix recebido do Andrei = repasse de receita já contabilizada pela
+  // integração Asaas — importar de novo contaria a receita em dobro.
+  if (/pix\s+recebido/i.test(description) && /andrei\s+da\s+silva/i.test(description)) return true
   // Aplicações e resgates de CDB / poupança / RDB → vão pra "reservas",
   // não são receita nem despesa do operacional
   if (/^aplicacao\b|\baplicacao\s+(em\s+)?cdb\b/i.test(description)) return true
