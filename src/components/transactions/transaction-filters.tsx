@@ -9,9 +9,8 @@ import { getAccounts } from '@/lib/accounts'
 import { getCreditCards } from '@/lib/credit-cards'
 import { getCustomCategories } from '@/lib/transactions'
 import {
-  CATEGORY_LABELS, INCOME_CATEGORIES, EXPENSE_CATEGORIES,
   getSubcategoryOptions,
-  type Account, type CreditCard, type Category,
+  type Account, type CreditCard,
 } from '@/types'
 import { X, Wallet, CreditCard as CardIcon } from 'lucide-react'
 
@@ -72,12 +71,6 @@ export function TransactionFilters({ month, year, category, subcategory, type, a
   const currentCustomCategory = category.startsWith('custom:') ? category.slice(7) : null
   const subOptions = currentCustomCategory ? getSubcategoryOptions(currentCustomCategory) : []
 
-  // Decide quais categorias built-in mostrar com base no tipo
-  const builtInCategories: Category[] =
-    type === 'income' ? INCOME_CATEGORIES.filter((c) => c !== 'custom') :
-    type === 'expense' ? EXPENSE_CATEGORIES.filter((c) => c !== 'custom') :
-    Array.from(new Set([...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES])).filter((c) => c !== 'custom')
-
   return (
     <div className="flex flex-wrap items-center gap-2">
       <MonthSelector month={month} year={year} />
@@ -101,23 +94,10 @@ export function TransactionFilters({ month, year, category, subcategory, type, a
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Todas as categorias</SelectItem>
-
-          {customCategories.length > 0 && (
-            <>
-              <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase">Personalizadas</div>
-              {customCategories.map((name) => (
-                <SelectItem key={`custom:${name}`} value={`custom:${name}`}>
-                  {name}
-                </SelectItem>
-              ))}
-            </>
-          )}
-
-          <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase">
-            {type === 'income' ? 'Receitas' : type === 'expense' ? 'Despesas' : 'Padrão'}
-          </div>
-          {builtInCategories.map((cat) => (
-            <SelectItem key={cat} value={cat}>{CATEGORY_LABELS[cat]}</SelectItem>
+          {customCategories.map((name) => (
+            <SelectItem key={`custom:${name}`} value={`custom:${name}`}>
+              {name}
+            </SelectItem>
           ))}
         </SelectContent>
       </Select>
