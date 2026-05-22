@@ -252,6 +252,15 @@ export async function deleteTransaction(id: string, deleteGroup = false): Promis
   if (error) throw error
 }
 
+// Exclui várias transações de uma vez (seleção em massa). RLS garante que
+// só apaga transações do próprio usuário.
+export async function deleteTransactions(ids: string[]): Promise<void> {
+  if (ids.length === 0) return
+  const supabase = createClient()
+  const { error } = await supabase.from('transactions').delete().in('id', ids)
+  if (error) throw error
+}
+
 // Para uma lista de descrições de despesa, devolve um mapa
 // descrição -> categoria inferida, com base em despesas já categorizadas
 // do mesmo lojista. Faz uma única consulta ao banco.
