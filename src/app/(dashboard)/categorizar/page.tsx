@@ -6,10 +6,10 @@ import { Button } from '@/components/ui/button'
 import { Loader2, CheckCircle2, ChevronRight, Undo2, X, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import {
-  getUncategorizedLPClients, categorizeClientByName,
-  getUncategorizedExpenses, categorizeExpenseByPattern,
+  getUncategorizedLPClients, getUncategorizedExpenses,
   type UncategorizedClient, type ExpenseOrigin,
 } from '@/lib/bulk-categorize'
+import { categorizeTransactions } from '@/lib/transactions'
 import { formatCurrency } from '@/lib/format'
 
 type Mode = 'income' | 'expense'
@@ -93,22 +93,17 @@ export default function CategorizarPage() {
     if (!current || processing) return
     setProcessing(true)
     try {
-      const updated = mode === 'income'
-        ? await categorizeClientByName(current.name, action.customCategory, action.subcategory)
-        : await categorizeExpenseByPattern(current.name, 'other', action.customCategory)
-      if (updated > 0) {
-        toast.success(`${current.name}: ${updated} transação(ões) → ${action.label}`)
-        setHistory((h) => [...h, { client: current, customCategory: action.customCategory, subcategory: action.subcategory, updatedCount: updated }])
-      } else {
-        toast.warning('Nenhuma transação foi atualizada (talvez o nome não case)')
-      }
+      const updated = current.ids.length
+      await categorizeTransactions(current.ids, action.customCategory, action.subcategory)
+      toast.success(`${current.name}: ${updated} transação(ões) → ${action.label}`)
+      setHistory((h) => [...h, { client: current, customCategory: action.customCategory, subcategory: action.subcategory, updatedCount: updated }])
       setIndex((i) => i + 1)
     } catch {
       toast.error('Erro ao categorizar')
     } finally {
       setProcessing(false)
     }
-  }, [current, processing, mode])
+  }, [current, processing])
 
   const skip = useCallback(() => {
     if (!current || processing) return

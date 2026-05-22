@@ -5,6 +5,7 @@ import { extractExpenseKey } from '@/lib/expense-key'
 
 export interface UncategorizedClient {
   name: string             // nome extraído da description
+  ids: string[]            // ids das transações desse grupo
   total: number            // soma líquida recebida
   count: number            // nº de lançamentos
   firstDate: string
@@ -35,7 +36,7 @@ export async function getUncategorizedExpenses(
   const supabase = createClient()
   let query = supabase
     .from('transactions')
-    .select('description, amount, date, credit_card_id, integration_id')
+    .select('id, description, amount, date, credit_card_id, integration_id')
     .eq('type', 'expense')
     .is('custom_category', null)
 
@@ -54,12 +55,14 @@ export async function getUncategorizedExpenses(
 
     const cur = map.get(key) ?? {
       name: key,
+      ids: [] as string[],
       total: 0,
       count: 0,
       firstDate: t.date,
       lastDate: t.date,
       sample: t.description,
     }
+    cur.ids.push(t.id as string)
     cur.total += Number(t.amount)
     cur.count += 1
     if (t.date < cur.firstDate) cur.firstDate = t.date
@@ -77,7 +80,7 @@ export async function getUncategorizedLPClients(fromDate?: string): Promise<Unca
   const supabase = createClient()
   let query = supabase
     .from('transactions')
-    .select('description, amount, date')
+    .select('id, description, amount, date')
     .eq('custom_category', 'Receita Landing Page / Site')
     .eq('type', 'income')
     .is('subcategory', null)
@@ -94,12 +97,14 @@ export async function getUncategorizedLPClients(fromDate?: string): Promise<Unca
     if (!name) continue
     const cur = map.get(name) ?? {
       name,
+      ids: [] as string[],
       total: 0,
       count: 0,
       firstDate: t.date,
       lastDate: t.date,
       sample: t.description,
     }
+    cur.ids.push(t.id as string)
     cur.total += Number(t.amount)
     cur.count += 1
     if (t.date < cur.firstDate) cur.firstDate = t.date
