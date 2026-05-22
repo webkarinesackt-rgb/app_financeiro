@@ -10,7 +10,7 @@ import {
 } from 'recharts'
 import {
   TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
-  Wallet, Target, Repeat, Briefcase, AlertCircle, ChevronRight,
+  Wallet, Target, Repeat, Briefcase, AlertCircle, ChevronRight, Printer,
 } from 'lucide-react'
 import { getTransactions } from '@/lib/transactions'
 import { getRecurringClients, sumMonthlyRecurringRevenue } from '@/lib/recurring-clients'
@@ -198,21 +198,32 @@ export default function PanoramaPage() {
 
   return (
     <div className="space-y-5 max-w-5xl">
+      <div className="hidden print:block mb-4">
+        <p className="text-xs text-slate-500">
+          Panorama — {periodLabel} · gerado em {new Date().toLocaleDateString('pt-BR')}
+        </p>
+      </div>
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
           <p className="eyebrow text-stone-500 mb-1">Visão Geral</p>
           <h1 className="font-display text-4xl sm:text-5xl text-stone-900 tracking-tight leading-none">Panorama</h1>
           <p className="text-stone-500 text-sm mt-2 capitalize italic font-display">{periodLabel}</p>
         </div>
-        <div className="inline-flex rounded-lg bg-slate-100 p-0.5 text-xs">
-          <button onClick={() => setPeriod('month')}
-            className={`px-3 py-1 rounded-md font-medium ${period === 'month' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>
-            Este mês
-          </button>
-          <button onClick={() => setPeriod('year')}
-            className={`px-3 py-1 rounded-md font-medium ${period === 'year' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>
-            Este ano
-          </button>
+        <div className="flex items-center gap-2 print:hidden">
+          <div className="inline-flex rounded-lg bg-slate-100 p-0.5 text-xs">
+            <button onClick={() => setPeriod('month')}
+              className={`px-3 py-1 rounded-md font-medium ${period === 'month' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>
+              Este mês
+            </button>
+            <button onClick={() => setPeriod('year')}
+              className={`px-3 py-1 rounded-md font-medium ${period === 'year' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>
+              Este ano
+            </button>
+          </div>
+          <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={() => window.print()}>
+            <Printer className="h-3.5 w-3.5" />
+            Exportar PDF
+          </Button>
         </div>
       </div>
 
@@ -223,7 +234,7 @@ export default function PanoramaPage() {
       ) : (
         <>
           {/* KPIs principais */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 break-inside-avoid">
             <KPICard
               label="Receita"
               value={income}
@@ -267,7 +278,7 @@ export default function PanoramaPage() {
           </div>
 
           {/* MRR + Custos fixos */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 break-inside-avoid">
             <Card className="border border-emerald-100 bg-emerald-50/40 shadow-sm">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-2">
@@ -302,7 +313,7 @@ export default function PanoramaPage() {
           </div>
 
           {/* Evolução / tendência */}
-          <Card className="border border-slate-100 shadow-sm">
+          <Card className="border border-slate-100 shadow-sm break-inside-avoid">
             <CardContent className="p-5">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-sm font-semibold text-slate-700">Evolução</h2>
@@ -333,7 +344,7 @@ export default function PanoramaPage() {
           </Card>
 
           {/* Breakdowns */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 break-inside-avoid">
             {/* Receita por tipo */}
             <Card className="border border-slate-100 shadow-sm">
               <CardContent className="p-5">
@@ -405,7 +416,7 @@ export default function PanoramaPage() {
 
           {/* Despesa por origem */}
           {originRows.length > 0 && (
-            <Card className="border border-slate-100 shadow-sm">
+            <Card className="border border-slate-100 shadow-sm break-inside-avoid">
               <CardContent className="p-5">
                 <h2 className="text-sm font-semibold text-slate-700 mb-3">Despesa por origem</h2>
                 <div className="space-y-2.5">
@@ -460,7 +471,7 @@ export default function PanoramaPage() {
           )}
 
           {/* Atalhos */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 print:hidden">
             <Link href="/a-cobrar"><Button variant="outline" className="w-full justify-start gap-2 h-10">
               <AlertCircle className="h-4 w-4 text-amber-600" />A Cobrar<ChevronRight className="h-3 w-3 ml-auto" />
             </Button></Link>

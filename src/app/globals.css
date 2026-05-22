@@ -205,3 +205,11 @@
     background-attachment: fixed;
   }
 }
+
+@media print {
+  /* Garante que cores de gráficos e cards saiam no PDF */
+  * {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}
