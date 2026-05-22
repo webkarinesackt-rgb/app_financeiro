@@ -8,7 +8,7 @@ import { toast } from 'sonner'
 import {
   getUncategorizedLPClients, categorizeClientByName,
   getUncategorizedExpenses, categorizeExpenseByPattern,
-  type UncategorizedClient,
+  type UncategorizedClient, type ExpenseOrigin,
 } from '@/lib/bulk-categorize'
 import { formatCurrency } from '@/lib/format'
 
@@ -66,6 +66,7 @@ export default function CategorizarPage() {
   const [processing, setProcessing] = useState(false)
   const [fromDate, setFromDate] = useState<string>(CURRENT_YEAR_START)
   const [mode, setMode] = useState<Mode>('income')
+  const [origin, setOrigin] = useState<ExpenseOrigin>('all')
 
   const ACTIONS = mode === 'income' ? INCOME_ACTIONS : EXPENSE_ACTIONS
 
@@ -74,14 +75,14 @@ export default function CategorizarPage() {
     try {
       const list = mode === 'income'
         ? await getUncategorizedLPClients(fromDate || undefined)
-        : await getUncategorizedExpenses(fromDate || undefined)
+        : await getUncategorizedExpenses(fromDate || undefined, origin)
       setClients(list)
       setIndex(0)
       setHistory([])
     } finally {
       setLoading(false)
     }
-  }, [fromDate, mode])
+  }, [fromDate, mode, origin])
 
   useEffect(() => { fetchClients() }, [fetchClients])
 
@@ -173,6 +174,18 @@ export default function CategorizarPage() {
             💸 Despesas
           </button>
         </div>
+
+        {/* Origin toggle — só despesas */}
+        {mode === 'expense' && (
+          <div className="inline-flex rounded-lg bg-slate-100 p-0.5 text-xs self-start">
+            {([['all', 'Tudo'], ['card', 'Cartão'], ['account', 'Conta'], ['asaas', 'Asaas']] as [ExpenseOrigin, string][]).map(([id, label]) => (
+              <button key={id} onClick={() => setOrigin(id)}
+                className={`px-3 py-1 rounded-md font-medium transition-colors ${origin === id ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Progress */}
