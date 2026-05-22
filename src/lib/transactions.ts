@@ -271,6 +271,20 @@ export async function deleteTransactions(ids: string[]): Promise<void> {
   }
 }
 
+// Junta uma custom_category dentro de outra: move TODOS os lançamentos
+// (todos os meses) de `from` para `to`. Roda como o usuário logado — a RLS
+// garante que só mexe nas transações dele. Não altera a subcategoria.
+export async function mergeCustomCategory(from: string, to: string): Promise<number> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('transactions')
+    .update({ category: 'custom', custom_category: to, updated_at: new Date().toISOString() })
+    .eq('custom_category', from)
+    .select('id')
+  if (error) throw error
+  return data?.length ?? 0
+}
+
 // Aplica uma custom_category (e subcategoria opcional) a várias transações
 // de uma vez — por ID, em lotes, sem depender de casar texto da descrição.
 export async function categorizeTransactions(

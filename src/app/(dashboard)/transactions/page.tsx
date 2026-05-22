@@ -7,6 +7,7 @@ import { Plus } from 'lucide-react'
 import { TransactionList } from '@/components/transactions/transaction-list'
 import { TransactionForm } from '@/components/transactions/transaction-form'
 import { TransactionFilters } from '@/components/transactions/transaction-filters'
+import { MergeCategoriesDialog } from '@/components/transactions/merge-categories-dialog'
 import { getTransactions } from '@/lib/transactions'
 import { getAccounts } from '@/lib/accounts'
 import { getCreditCards } from '@/lib/credit-cards'
@@ -29,6 +30,7 @@ function TransactionsContent() {
   const [cards, setCards] = useState<CreditCard[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [showMerge, setShowMerge] = useState(false)
 
   const fetchAll = useCallback(async () => {
     setLoading(true)
@@ -72,13 +74,18 @@ function TransactionsContent() {
             {transactions.length} encontrada(s)
           </p>
         </div>
-        <Button
-          className="bg-emerald-600 hover:bg-emerald-700 gap-2 self-start sm:self-auto"
-          onClick={() => setShowForm(true)}
-        >
-          <Plus className="h-4 w-4" />
-          Nova Transação
-        </Button>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <Button variant="outline" onClick={() => setShowMerge(true)}>
+            Juntar categorias
+          </Button>
+          <Button
+            className="bg-emerald-600 hover:bg-emerald-700 gap-2"
+            onClick={() => setShowForm(true)}
+          >
+            <Plus className="h-4 w-4" />
+            Nova Transação
+          </Button>
+        </div>
       </div>
 
       <Suspense>
@@ -132,6 +139,12 @@ function TransactionsContent() {
       <TransactionForm
         open={showForm}
         onClose={() => setShowForm(false)}
+        onSuccess={fetchAll}
+      />
+
+      <MergeCategoriesDialog
+        open={showMerge}
+        onClose={() => setShowMerge(false)}
         onSuccess={fetchAll}
       />
     </div>
