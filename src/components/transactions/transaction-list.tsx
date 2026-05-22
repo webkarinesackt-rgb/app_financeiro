@@ -20,10 +20,19 @@ import { TransactionForm } from './transaction-form'
 import type { Transaction, Account, CreditCard } from '@/types'
 
 // Categorias oferecidas na recategorização em massa.
-const BULK_CATEGORIES = [
-  'Pró-labore sócios', 'Equipe', 'Marketing', 'Ferramentas', 'Infraestrutura',
-  'Cursos / Treinamentos', 'Contabilidade', 'Impostos', 'Encargos financeiros',
-  'Alimentação', 'Outros',
+const BULK_CATEGORIES: { label: string; customCategory: string; subcategory: string | null }[] = [
+  { label: 'Pró-labore · Karine', customCategory: 'Pró-labore', subcategory: 'Karine' },
+  { label: 'Pró-labore · Andrei', customCategory: 'Pró-labore', subcategory: 'Andrei' },
+  { label: 'Equipe', customCategory: 'Equipe', subcategory: null },
+  { label: 'Marketing', customCategory: 'Marketing', subcategory: null },
+  { label: 'Ferramentas', customCategory: 'Ferramentas', subcategory: null },
+  { label: 'Infraestrutura', customCategory: 'Infraestrutura', subcategory: null },
+  { label: 'Cursos / Treinamentos', customCategory: 'Cursos / Treinamentos', subcategory: null },
+  { label: 'Contabilidade', customCategory: 'Contabilidade', subcategory: null },
+  { label: 'Impostos', customCategory: 'Impostos', subcategory: null },
+  { label: 'Encargos financeiros', customCategory: 'Encargos financeiros', subcategory: null },
+  { label: 'Alimentação', customCategory: 'Alimentação', subcategory: null },
+  { label: 'Outros', customCategory: 'Outros', subcategory: null },
 ]
 
 interface TransactionListProps {
@@ -102,11 +111,11 @@ export function TransactionList({ transactions, accounts = [], cards = [], onRef
     }
   }
 
-  async function handleBulkCategorize(customCategory: string) {
+  async function handleBulkCategorize(customCategory: string, subcategory: string | null, label: string) {
     setDeleteLoading(true)
     try {
-      await categorizeTransactions(selectedIds, customCategory)
-      toast.success(`${selectedIds.length} transação(ões) → ${customCategory}`)
+      await categorizeTransactions(selectedIds, customCategory, subcategory)
+      toast.success(`${selectedIds.length} transação(ões) → ${label}`)
       setSelected(new Set())
       onRefresh()
     } catch {
@@ -150,8 +159,8 @@ export function TransactionList({ transactions, accounts = [], cards = [], onRef
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     {BULK_CATEGORIES.map((c) => (
-                      <DropdownMenuItem key={c} onClick={() => handleBulkCategorize(c)}>
-                        {c}
+                      <DropdownMenuItem key={c.label} onClick={() => handleBulkCategorize(c.customCategory, c.subcategory, c.label)}>
+                        {c.label}
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>

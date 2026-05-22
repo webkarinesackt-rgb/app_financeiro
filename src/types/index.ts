@@ -235,6 +235,7 @@ export const SUBCATEGORIES_BY_CUSTOM_CATEGORY: Record<string, string[]> = {
     'Alterações',
     'Anúncios',
   ],
+  'Pró-labore': ['Karine', 'Andrei'],
 }
 
 export function getSubcategoryOptions(customCategory: string | null | undefined): string[] {
