@@ -1,6 +1,7 @@
 import { addMonths } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import type { Transaction, TransactionFormData } from '@/types'
+import { CATEGORY_LABELS } from '@/types'
 import { buildMerchantCategoryMap, matchMerchantCategory, type CategoryMatch } from '@/lib/expense-key'
 
 // Extrai o "nome do cliente" da descrição (helper compartilhado).
@@ -156,7 +157,15 @@ export async function getTransactions(filters?: {
   }
   if (filters?.category && filters.category !== 'all') {
     if (filters.category.startsWith('custom:')) {
-      query = query.eq('category', 'custom').eq('custom_category', filters.category.slice(7))
+      const name = filters.category.slice(7)
+      // Se existe uma categoria built-in com o mesmo rótulo (ex.: "Outros" =
+      // custom "Outros" + built-in "other"), filtra os dois juntos.
+      const builtin = Object.entries(CATEGORY_LABELS).find(([, v]) => v === name)?.[0]
+      if (builtin) {
+        query = query.or(`and(category.eq.custom,custom_category.eq.${name}),category.eq.${builtin}`)
+      } else {
+        query = query.eq('category', 'custom').eq('custom_category', name)
+      }
     } else {
       query = query.eq('category', filters.category)
     }

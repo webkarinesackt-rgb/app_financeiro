@@ -101,14 +101,24 @@ export function TransactionFilters({ month, year, category, subcategory, type, a
               {name}
             </SelectItem>
           ))}
-          {usedBuiltIn.length > 0 && (
-            <>
-              <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase">Padrão (em uso)</div>
-              {usedBuiltIn.map((cat) => (
-                <SelectItem key={cat} value={cat}>{CATEGORY_LABELS[cat as Category] ?? cat}</SelectItem>
-              ))}
-            </>
-          )}
+          {(() => {
+            // Esconde built-in cujo rótulo já existe como custom (evita "Outros"
+            // duplicado no dropdown). A busca já inclui as duas quando filtra.
+            const customSet = new Set(customCategories)
+            const visible = usedBuiltIn.filter((cat) => {
+              const label = CATEGORY_LABELS[cat as Category] ?? cat
+              return !customSet.has(label)
+            })
+            if (visible.length === 0) return null
+            return (
+              <>
+                <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase">Padrão (em uso)</div>
+                {visible.map((cat) => (
+                  <SelectItem key={cat} value={cat}>{CATEGORY_LABELS[cat as Category] ?? cat}</SelectItem>
+                ))}
+              </>
+            )
+          })()}
         </SelectContent>
       </Select>
 
