@@ -23,6 +23,7 @@ export interface Transaction {
   date: string
   account_id: string | null
   credit_card_id: string | null
+  integration_id: string | null
   payment_method: PaymentMethod | null
   installment_total: number | null
   installment_current: number | null
