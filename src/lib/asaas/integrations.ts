@@ -56,6 +56,14 @@ export async function runBackfill(id: string): Promise<{ imported: number; faile
   return res.json()
 }
 
+export async function runExpenseBackfill(
+  id: string,
+): Promise<{ imported: number; failed: number; ignoredFysi: number; firstError?: string | null }> {
+  const res = await fetch(`/api/asaas/${id}/backfill-expenses`, { method: 'POST' })
+  if (!res.ok) throw new Error(await res.text())
+  return res.json()
+}
+
 export function webhookUrl(integrationId: string, origin: string): string {
   return `${origin}/api/webhooks/asaas/${integrationId}`
 }

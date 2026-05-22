@@ -9,9 +9,9 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   listIntegrations, createIntegration, deleteIntegration, toggleIntegration,
-  runBackfill, webhookUrl, type AsaasIntegration,
+  runBackfill, runExpenseBackfill, webhookUrl, type AsaasIntegration,
 } from '@/lib/asaas/integrations'
-import { Plus, Trash2, RefreshCw, Copy, Plug, Loader2, Power, PowerOff } from 'lucide-react'
+import { Plus, Trash2, RefreshCw, Copy, Plug, Loader2, Power, PowerOff, TrendingDown } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function IntegrationsPage() {
@@ -72,6 +72,24 @@ export default function IntegrationsPage() {
     finally { setBusy(null) }
   }
 
+  async function handleExpenseBackfill(id: string) {
+    setBusy(id)
+    try {
+      const r = await runExpenseBackfill(id)
+      if (r.failed > 0 && r.imported === 0) {
+        toast.error(`Importação falhou — ${r.failed} despesas não importadas`, {
+          description: r.firstError ?? 'Erro desconhecido — ver logs Vercel',
+        })
+      } else {
+        toast.success(`${r.imported} despesa(s) importada(s)`, {
+          description: `${r.ignoredFysi} transferência(s) para a Fysi ignorada(s)`,
+        })
+      }
+      fetchData()
+    } catch (e) { toast.error('Erro na importação de despesas', { description: (e as Error).message }) }
+    finally { setBusy(null) }
+  }
+
   function copy(value: string, what: string) {
     navigator.clipboard.writeText(value)
     toast.success(`${what} copiado`)
@@ -127,6 +145,11 @@ export default function IntegrationsPage() {
                         title="Importar cobranças passadas"
                         className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors disabled:opacity-50">
                         {busy === it.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                      </button>
+                      <button onClick={() => handleExpenseBackfill(it.id)} disabled={busy === it.id}
+                        title="Importar despesas (transferências de saída)"
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50">
+                        {busy === it.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <TrendingDown className="h-3.5 w-3.5" />}
                       </button>
                       <button onClick={() => handleToggle(it.id, it.active)} disabled={busy === it.id}
                         title={it.active ? 'Desativar' : 'Ativar'}
