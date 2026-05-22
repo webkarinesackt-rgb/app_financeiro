@@ -100,6 +100,23 @@ export async function findCategoryByDescriptionPattern(
   return null
 }
 
+// Retorna as categorias built-in (padrão) que o usuário realmente usa.
+// Usado pra mostrar no filtro só as categorias que aparecem na base, em vez
+// de uma lista enorme de padrão que não serve pra ele.
+export async function getUsedBuiltInCategories(type?: 'income' | 'expense'): Promise<string[]> {
+  const supabase = createClient()
+  let query = supabase.from('transactions').select('category').neq('category', 'custom')
+  if (type) query = query.eq('type', type)
+  const { data, error } = await query
+  if (error || !data) return []
+  const set = new Set<string>()
+  for (const r of data) {
+    const c = (r as { category: string | null }).category
+    if (c && c !== 'custom') set.add(c)
+  }
+  return Array.from(set).sort()
+}
+
 // Retorna as custom_category distintas usadas pelo usuário, opcionalmente filtradas
 // por tipo (income/expense). Usado pra montar dropdowns de filtro.
 export async function getCustomCategories(type?: 'income' | 'expense'): Promise<string[]> {

@@ -7,10 +7,10 @@ import { Button } from '@/components/ui/button'
 import { MonthSelector } from '@/components/dashboard/month-selector'
 import { getAccounts } from '@/lib/accounts'
 import { getCreditCards } from '@/lib/credit-cards'
-import { getCustomCategories } from '@/lib/transactions'
+import { getCustomCategories, getUsedBuiltInCategories } from '@/lib/transactions'
 import {
-  getSubcategoryOptions,
-  type Account, type CreditCard,
+  CATEGORY_LABELS, getSubcategoryOptions,
+  type Account, type CreditCard, type Category,
 } from '@/types'
 import { X, Wallet, CreditCard as CardIcon } from 'lucide-react'
 
@@ -30,16 +30,18 @@ export function TransactionFilters({ month, year, category, subcategory, type, a
   const [accounts, setAccounts] = useState<Account[]>([])
   const [cards, setCards] = useState<CreditCard[]>([])
   const [customCategories, setCustomCategories] = useState<string[]>([])
+  const [usedBuiltIn, setUsedBuiltIn] = useState<string[]>([])
 
   useEffect(() => {
     getAccounts().then(setAccounts).catch(() => {})
     getCreditCards().then(setCards).catch(() => {})
   }, [])
 
-  // Recarrega customizadas quando o tipo muda
+  // Recarrega categorias usadas (custom + padrão) quando o tipo muda
   useEffect(() => {
     const t = type === 'income' || type === 'expense' ? type : undefined
     getCustomCategories(t).then(setCustomCategories).catch(() => setCustomCategories([]))
+    getUsedBuiltInCategories(t).then(setUsedBuiltIn).catch(() => setUsedBuiltIn([]))
   }, [type])
 
   function setParam(key: string, value: string) {
@@ -99,6 +101,14 @@ export function TransactionFilters({ month, year, category, subcategory, type, a
               {name}
             </SelectItem>
           ))}
+          {usedBuiltIn.length > 0 && (
+            <>
+              <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase">Padrão (em uso)</div>
+              {usedBuiltIn.map((cat) => (
+                <SelectItem key={cat} value={cat}>{CATEGORY_LABELS[cat as Category] ?? cat}</SelectItem>
+              ))}
+            </>
+          )}
         </SelectContent>
       </Select>
 
