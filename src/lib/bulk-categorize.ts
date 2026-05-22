@@ -1,6 +1,7 @@
 // Helpers pra categorização em massa de transações por cliente.
 
 import { createClient } from '@/lib/supabase/client'
+import { extractExpenseKey } from '@/lib/expense-key'
 
 export interface UncategorizedClient {
   name: string             // nome extraído da description
@@ -20,41 +21,7 @@ function extractClient(description: string): string | null {
   return null
 }
 
-// Extrai o "lojista/destinatário" de uma descrição de despesa.
-// Padrões reconhecidos:
-//   - "Pix enviado: Cp :NNNNN-Nome do Destinatário"      → Nome
-//   - "Pagamento efetuado: ..."                            → tudo após ":"
-//   - "FACEBK 347GXKDYT2 SAO PAULO BRA"                    → FACEBK
-//   - "IG NuvemHost Governador Va BRA"                     → IG NuvemHost
-//   - "CLICKUP 8886254258 CA"                              → CLICKUP
-function extractExpenseKey(description: string): string | null {
-  const d = description.trim()
-
-  // 1) Pix com Cp :NNNN-Nome
-  const pixMatch = d.match(/Cp\s*:[\d]+-(.+?)(\s+\d{6,}|$)/)
-  if (pixMatch && pixMatch[1].trim().length >= 3) return pixMatch[1].trim()
-
-  // 2) Pagamento efetuado: <descrição>
-  const pagMatch = d.match(/^Pagamento\s+efetuado:\s*(.+)$/i)
-  if (pagMatch && pagMatch[1].trim().length >= 3) {
-    return extractExpenseKey(pagMatch[1].trim()) ?? pagMatch[1].trim().slice(0, 30)
-  }
-
-  // 3) Cartão: primeiros tokens significativos, parando em IDs longos (>= 6 dígitos)
-  //    ou códigos de estado/país (SAO, RIO, BRA, CA, NL etc com 2-3 letras maiúsculas no final)
-  const tokens = d.split(/\s+/).filter((w) => w.length >= 2)
-  const meaningful: string[] = []
-  for (const tok of tokens) {
-    // para em ID longo (6+ dígitos/alfanumérico)
-    if (/^[a-zA-Z0-9]{6,}$/.test(tok) && /\d/.test(tok)) break
-    // para em código curto isolado (geralmente locale do final)
-    if (meaningful.length >= 1 && /^[A-Z]{2,3}$/.test(tok)) break
-    meaningful.push(tok)
-    if (meaningful.length >= 3) break
-  }
-  const key = meaningful.join(' ').trim()
-  return key.length >= 3 ? key : null
-}
+// extractExpenseKey vive em @/lib/expense-key (importado acima).
 
 // Lista DESPESAS não-categorizadas (category='other' OU sem custom_category),
 // agrupado por "nome" extraído (lojista/destinatário) da description.
