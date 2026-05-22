@@ -136,3 +136,44 @@ export async function* paginate<T>(
     offset += page.limit
   }
 }
+
+export type AsaasTransferStatus =
+  | 'PENDING' | 'BANK_PROCESSING' | 'DONE' | 'FAILED' | 'CANCELLED' | 'BLOCKED'
+
+export interface AsaasBankAccount {
+  ownerName?: string | null
+  cpfCnpj?: string | null
+  bank?: { name?: string | null } | null
+}
+
+export interface AsaasTransfer {
+  id: string
+  dateCreated: string             // YYYY-MM-DD
+  effectiveDate: string | null    // data em que a transferência saiu
+  status: AsaasTransferStatus
+  type: string                    // PIX | TED | INTERNAL
+  value: number
+  netValue: number | null
+  transferFee: number | null
+  description: string | null
+  bankAccount: AsaasBankAccount | null
+  pixAddressKey: string | null
+}
+
+export async function listTransfers(
+  env: AsaasEnv,
+  apiKey: string,
+  params: {
+    dateCreatedGe?: string  // YYYY-MM-DD
+    dateCreatedLe?: string
+    limit?: number
+    offset?: number
+  } = {},
+): Promise<AsaasListResponse<AsaasTransfer>> {
+  const q = new URLSearchParams()
+  if (params.dateCreatedGe) q.set('dateCreated[ge]', params.dateCreatedGe)
+  if (params.dateCreatedLe) q.set('dateCreated[le]', params.dateCreatedLe)
+  q.set('limit', String(params.limit ?? 100))
+  q.set('offset', String(params.offset ?? 0))
+  return asaasFetch(env, apiKey, `/transfers?${q.toString()}`)
+}
