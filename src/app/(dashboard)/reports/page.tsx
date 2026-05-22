@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { MonthSelector } from '@/components/dashboard/month-selector'
 import { getTransactions } from '@/lib/transactions'
 import { formatCurrency, getMonthName } from '@/lib/format'
-import { getCategoryLabel, CATEGORY_COLORS, type Transaction, type Category } from '@/types'
+import { getCategoryLabel, CATEGORY_COLORS, CUSTOM_EXPENSE_COLORS, type Transaction, type Category } from '@/types'
 import { Badge } from '@/components/ui/badge'
 
 type Tab = 'projects' | 'categories' | 'overview'
@@ -63,7 +63,7 @@ function ReportsContent() {
       label,
       amount,
       percentage: totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0,
-      color: CATEGORY_COLORS[cat as Category] ?? '#94a3b8',
+      color: CUSTOM_EXPENSE_COLORS[cat] ?? CATEGORY_COLORS[cat as Category] ?? '#94a3b8',
     }))
     .sort((a, b) => b.amount - a.amount)
 

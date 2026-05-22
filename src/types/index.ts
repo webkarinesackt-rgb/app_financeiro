@@ -356,6 +356,21 @@ export const EXPENSE_CATEGORIES: Category[] = [
 export const ACCOUNT_PAYMENT_METHODS: PaymentMethod[] = ['pix', 'debit', 'cash', 'transfer', 'boleto', 'other']
 export const CARD_PAYMENT_METHODS: PaymentMethod[] = ['credit']
 
+// Cores das categorias customizadas de despesa (usadas no Panorama e Relatórios).
+export const CUSTOM_EXPENSE_COLORS: Record<string, string> = {
+  'Marketing': '#f43f5e',
+  'Ferramentas': '#3b82f6',
+  'Infraestrutura': '#8b5cf6',
+  'Equipe': '#10b981',
+  'Pró-labore': '#14b8a6',
+  'Cursos / Treinamentos': '#6366f1',
+  'Contabilidade': '#06b6d4',
+  'Impostos': '#f59e0b',
+  'Encargos financeiros': '#f97316',
+  'Alimentação': '#eab308',
+  'Outros': '#64748b',
+}
+
 export const CATEGORY_COLORS: Record<Category, string> = {
   salary: '#10b981', freelance: '#3b82f6', project: '#0ea5e9', consulting: '#6366f1',
   commission: '#8b5cf6', bonus: '#a855f7', rental: '#ec4899', digital_products: '#06b6d4',

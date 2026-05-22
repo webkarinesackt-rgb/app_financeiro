@@ -17,7 +17,7 @@ import { getRecurringClients, sumMonthlyRecurringRevenue } from '@/lib/recurring
 import { getFixedCosts, sumMonthlyFixedCosts } from '@/lib/fixed-costs'
 import { formatCurrency, getMonthName } from '@/lib/format'
 import { getTrendMonths, getYearToDateMonths, yearToDateLabel, splitExpensesByOrigin } from '@/lib/panorama'
-import type { Transaction, RecurringClient, FixedCost } from '@/types'
+import { CUSTOM_EXPENSE_COLORS, CATEGORY_COLORS, type Transaction, type RecurringClient, type FixedCost, type Category } from '@/types'
 
 const PROJECT_COLORS: Record<string, string> = {
   'Landing page com copy': '#10b981',
@@ -32,17 +32,10 @@ const PROJECT_COLORS: Record<string, string> = {
   'Sem categoria': '#cbd5e1',
 }
 
-const EXPENSE_COLORS: Record<string, string> = {
-  'Marketing': '#f43f5e',
-  'Ferramentas': '#3b82f6',
-  'Infraestrutura': '#8b5cf6',
-  'Equipe': '#10b981',
-  'Cursos / Treinamentos': '#6366f1',
-  'Contabilidade': '#06b6d4',
-  'Impostos': '#f59e0b',
-  'Encargos financeiros': '#f97316',
-  'Alimentação': '#eab308',
-  'Outros': '#64748b',
+// Cores das despesas — usa o mapa compartilhado (Marketing, Equipe, Pró-labore, etc.)
+// com fallback nas cores das categorias built-in.
+function expenseColor(name: string): string {
+  return CUSTOM_EXPENSE_COLORS[name] ?? CATEGORY_COLORS[name as Category] ?? '#94a3b8'
 }
 
 export default function PanoramaPage() {
@@ -161,7 +154,7 @@ export default function PanoramaPage() {
       name,
       amount,
       percentage: expense > 0 ? (amount / expense) * 100 : 0,
-      color: EXPENSE_COLORS[name] ?? '#94a3b8',
+      color: expenseColor(name),
     }))
     .sort((a, b) => b.amount - a.amount)
 
