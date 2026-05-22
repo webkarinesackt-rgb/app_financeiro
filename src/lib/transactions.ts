@@ -252,17 +252,27 @@ export async function deleteTransaction(id: string, deleteGroup = false): Promis
   if (error) throw error
 }
 
-// Exclui várias transações de uma vez (seleção em massa). RLS garante que
-// só apaga transações do próprio usuário.
+// Divide um array em lotes de `size` (evita requisições grandes demais
+// quando há centenas de ids selecionados).
+function chunk<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = []
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size))
+  return out
+}
+
+// Exclui várias transações de uma vez (seleção em massa), em lotes.
+// RLS garante que só apaga transações do próprio usuário.
 export async function deleteTransactions(ids: string[]): Promise<void> {
   if (ids.length === 0) return
   const supabase = createClient()
-  const { error } = await supabase.from('transactions').delete().in('id', ids)
-  if (error) throw error
+  for (const batch of chunk(ids, 100)) {
+    const { error } = await supabase.from('transactions').delete().in('id', batch)
+    if (error) throw error
+  }
 }
 
 // Aplica uma custom_category (e subcategoria opcional) a várias transações
-// de uma vez — por ID, sem depender de casar texto da descrição.
+// de uma vez — por ID, em lotes, sem depender de casar texto da descrição.
 export async function categorizeTransactions(
   ids: string[],
   customCategory: string,
@@ -270,16 +280,18 @@ export async function categorizeTransactions(
 ): Promise<void> {
   if (ids.length === 0) return
   const supabase = createClient()
-  const { error } = await supabase
-    .from('transactions')
-    .update({
-      category: 'custom',
-      custom_category: customCategory,
-      subcategory,
-      updated_at: new Date().toISOString(),
-    })
-    .in('id', ids)
-  if (error) throw error
+  for (const batch of chunk(ids, 100)) {
+    const { error } = await supabase
+      .from('transactions')
+      .update({
+        category: 'custom',
+        custom_category: customCategory,
+        subcategory,
+        updated_at: new Date().toISOString(),
+      })
+      .in('id', batch)
+    if (error) throw error
+  }
 }
 
 // Para uma lista de descrições de despesa, devolve um mapa
