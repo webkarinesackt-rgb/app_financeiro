@@ -1,6 +1,7 @@
 import { addMonths } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import type { Transaction, TransactionFormData } from '@/types'
+import { buildMerchantCategoryMap, matchMerchantCategory, type CategoryMatch } from '@/lib/expense-key'
 
 // Extrai o "nome do cliente" da descrição (helper compartilhado).
 function extractClientPattern(description: string): string | null {
@@ -249,4 +250,33 @@ export async function deleteTransaction(id: string, deleteGroup = false): Promis
 
   const { error } = await supabase.from('transactions').delete().eq('id', id)
   if (error) throw error
+}
+
+// Para uma lista de descrições de despesa, devolve um mapa
+// descrição -> categoria inferida, com base em despesas já categorizadas
+// do mesmo lojista. Faz uma única consulta ao banco.
+export async function inferCategoriesFromHistory(
+  descriptions: string[],
+): Promise<Map<string, CategoryMatch>> {
+  const result = new Map<string, CategoryMatch>()
+  if (descriptions.length === 0) return result
+
+  const supabase = createClient()
+  const { data } = await supabase
+    .from('transactions')
+    .select('description, custom_category, subcategory')
+    .eq('type', 'expense')
+    .eq('category', 'custom')
+    .not('custom_category', 'is', null)
+
+  const samples = (data ?? [])
+    .filter((r): r is { description: string; custom_category: string; subcategory: string | null } =>
+      typeof r.description === 'string' && typeof r.custom_category === 'string')
+
+  const merchantMap = buildMerchantCategoryMap(samples)
+  for (const desc of descriptions) {
+    const match = matchMerchantCategory(desc, merchantMap)
+    if (match) result.set(desc, match)
+  }
+  return result
 }
