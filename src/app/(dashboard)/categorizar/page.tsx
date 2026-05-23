@@ -66,7 +66,7 @@ export default function CategorizarPage() {
   const [loading, setLoading] = useState(true)
   const [history, setHistory] = useState<HistoryEntry[]>([])
   const [processing, setProcessing] = useState(false)
-  const [fromDate, setFromDate] = useState<string>(CURRENT_YEAR_START)
+  const [fromDate, setFromDate] = useState<string>('')
   const [mode, setMode] = useState<Mode>('income')
   const [origin, setOrigin] = useState<ExpenseOrigin>('all')
 
@@ -146,7 +146,25 @@ export default function CategorizarPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+            <div className="inline-flex rounded-md bg-slate-100 p-0.5 text-[11px]">
+              <button onClick={() => setFromDate('')}
+                className={`px-2.5 py-1 rounded font-medium transition-colors ${!fromDate ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                Tudo
+              </button>
+              <button onClick={() => setFromDate(CURRENT_YEAR_START)}
+                className={`px-2.5 py-1 rounded font-medium transition-colors ${fromDate === CURRENT_YEAR_START ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                {new Date().getFullYear()}
+              </button>
+              <button onClick={() => {
+                const d = new Date()
+                d.setFullYear(d.getFullYear() - 1)
+                setFromDate(d.toISOString().slice(0, 10))
+              }}
+                className="px-2.5 py-1 rounded font-medium transition-colors text-slate-500 hover:text-slate-700">
+                12 meses
+              </button>
+            </div>
             <label className="text-xs text-slate-500">Desde:</label>
             <input
               type="date"
