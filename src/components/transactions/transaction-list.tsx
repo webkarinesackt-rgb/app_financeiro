@@ -15,9 +15,10 @@ import { MoreVertical, Pencil, Trash2, TrendingUp, TrendingDown, RefreshCw, Wall
 import { toast } from 'sonner'
 import { deleteTransaction, deleteTransactions, categorizeTransactions } from '@/lib/transactions'
 import { formatCurrency, formatDate } from '@/lib/format'
-import { getCategoryLabel, getBankColor, RECURRENCE_LABELS } from '@/types'
+import { getCategoryLabelByWorkspace, getBankColor, RECURRENCE_LABELS } from '@/types'
 import { TransactionForm } from './transaction-form'
 import type { Transaction, Account, CreditCard } from '@/types'
+import { useWorkspace } from '@/hooks/use-workspace'
 
 // Categorias oferecidas na recategorização em massa.
 const BULK_CATEGORIES: { label: string; customCategory: string; subcategory: string | null }[] = [
@@ -43,6 +44,7 @@ interface TransactionListProps {
 }
 
 export function TransactionList({ transactions, accounts = [], cards = [], onRefresh }: TransactionListProps) {
+  const workspace = useWorkspace()
   const router = useRouter()
   const searchParams = useSearchParams()
   const [editingTx, setEditingTx] = useState<Transaction | null>(null)
@@ -211,7 +213,7 @@ export function TransactionList({ transactions, accounts = [], cards = [], onRef
                         </span>
                       )}
                       <Badge variant="outline" className="text-xs shrink-0 hidden sm:flex">
-                        {getCategoryLabel(t.category, t.custom_category)}
+                        {getCategoryLabelByWorkspace(workspace, t.category, t.custom_category)}
                       </Badge>
                       {t.subcategory && (
                         <Badge variant="outline" className="text-xs shrink-0 hidden sm:flex bg-emerald-50 border-emerald-200 text-emerald-700">

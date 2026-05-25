@@ -1,7 +1,22 @@
+'use client'
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { CATEGORY_LABELS, CATEGORY_COLORS, INCOME_CATEGORIES, EXPENSE_CATEGORIES } from '@/types'
+import {
+  CATEGORY_LABELS, CATEGORY_COLORS, INCOME_CATEGORIES, EXPENSE_CATEGORIES,
+  PERSONAL_CATEGORY_LABELS, PERSONAL_CATEGORY_COLORS,
+  PERSONAL_INCOME_CATEGORIES, PERSONAL_EXPENSE_CATEGORIES,
+} from '@/types'
+import { useWorkspace } from '@/hooks/use-workspace'
 
 export default function CategoriesPage() {
+  const workspace = useWorkspace()
+  const isPersonal = workspace === 'personal'
+
+  const incomeCategories = isPersonal ? PERSONAL_INCOME_CATEGORIES : INCOME_CATEGORIES
+  const expenseCategories = isPersonal ? PERSONAL_EXPENSE_CATEGORIES : EXPENSE_CATEGORIES
+  const labels = isPersonal ? PERSONAL_CATEGORY_LABELS : CATEGORY_LABELS
+  const colors = isPersonal ? PERSONAL_CATEGORY_COLORS : CATEGORY_COLORS
+
   return (
     <div className="space-y-4">
       <div>
@@ -15,16 +30,16 @@ export default function CategoriesPage() {
         </CardHeader>
         <CardContent className="pt-0">
           <div className="flex flex-wrap gap-2">
-            {INCOME_CATEGORIES.map((cat) => (
+            {incomeCategories.map((cat) => (
               <div
                 key={cat}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-slate-50 border border-slate-100 text-slate-700"
               >
                 <span
                   className="h-2 w-2 rounded-full shrink-0"
-                  style={{ backgroundColor: CATEGORY_COLORS[cat] }}
+                  style={{ backgroundColor: colors[cat as keyof typeof colors] }}
                 />
-                {cat === 'custom' ? 'Personalizada' : CATEGORY_LABELS[cat]}
+                {cat === 'custom' ? 'Personalizada' : labels[cat as keyof typeof labels]}
               </div>
             ))}
           </div>
@@ -37,16 +52,16 @@ export default function CategoriesPage() {
         </CardHeader>
         <CardContent className="pt-0">
           <div className="flex flex-wrap gap-2">
-            {EXPENSE_CATEGORIES.map((cat) => (
+            {expenseCategories.map((cat) => (
               <div
                 key={cat}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-slate-50 border border-slate-100 text-slate-700"
               >
                 <span
                   className="h-2 w-2 rounded-full shrink-0"
-                  style={{ backgroundColor: CATEGORY_COLORS[cat] }}
+                  style={{ backgroundColor: colors[cat as keyof typeof colors] }}
                 />
-                {cat === 'custom' ? 'Personalizada' : CATEGORY_LABELS[cat]}
+                {cat === 'custom' ? 'Personalizada' : labels[cat as keyof typeof labels]}
               </div>
             ))}
           </div>

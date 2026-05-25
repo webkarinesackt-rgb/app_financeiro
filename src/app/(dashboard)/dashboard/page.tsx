@@ -7,7 +7,8 @@ import { getAccountsWithBalances } from '@/lib/accounts'
 import { getCreditCardsWithUsage } from '@/lib/credit-cards'
 import { getTransactions } from '@/lib/transactions'
 import { formatCurrency } from '@/lib/format'
-import { getCategoryLabel, getBankColor, type AccountWithBalance, type CreditCardWithUsage, type Transaction, type Category } from '@/types'
+import { getCategoryLabel, getCategoryLabelByWorkspace, getBankColor, type AccountWithBalance, type CreditCardWithUsage, type Transaction, type Category } from '@/types'
+import { useWorkspace } from '@/hooks/use-workspace'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { TransactionForm } from '@/components/transactions/transaction-form'
@@ -32,6 +33,7 @@ function getGreeting(): string {
 }
 
 export default function DashboardPage() {
+  const workspace = useWorkspace()
   const now = new Date()
   const month = now.getMonth() + 1
   const year = now.getFullYear()
@@ -82,7 +84,7 @@ export default function DashboardPage() {
     .filter((t) => t.type === 'expense')
     .reduce<Record<string, { amount: number; label: string }>>((acc, t) => {
       const key = t.category === 'custom' ? (t.custom_category ?? 'custom') : t.category
-      const label = getCategoryLabel(t.category as Category, t.custom_category)
+      const label = getCategoryLabelByWorkspace(workspace, t.category, t.custom_category)
       acc[key] = { amount: (acc[key]?.amount ?? 0) + t.amount, label }
       return acc
     }, {})

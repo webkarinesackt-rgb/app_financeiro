@@ -9,9 +9,10 @@ import { getAccounts } from '@/lib/accounts'
 import { getCreditCards } from '@/lib/credit-cards'
 import { getCustomCategories, getUsedBuiltInCategories } from '@/lib/transactions'
 import {
-  CATEGORY_LABELS, getSubcategoryOptions,
-  type Account, type CreditCard, type Category,
+  CATEGORY_LABELS, PERSONAL_CATEGORY_LABELS, getSubcategoryOptions,
+  type Account, type CreditCard, type Category, type PersonalCategory,
 } from '@/types'
+import { useWorkspace } from '@/hooks/use-workspace'
 import { X, Wallet, CreditCard as CardIcon } from 'lucide-react'
 
 interface TransactionFiltersProps {
@@ -25,6 +26,8 @@ interface TransactionFiltersProps {
 }
 
 export function TransactionFilters({ month, year, category, subcategory, type, accountId, creditCardId }: TransactionFiltersProps) {
+  const workspace = useWorkspace()
+  const categoryLabels = workspace === 'personal' ? PERSONAL_CATEGORY_LABELS : CATEGORY_LABELS
   const router = useRouter()
   const searchParams = useSearchParams()
   const [accounts, setAccounts] = useState<Account[]>([])
@@ -106,7 +109,7 @@ export function TransactionFilters({ month, year, category, subcategory, type, a
             // duplicado no dropdown). A busca já inclui as duas quando filtra.
             const customSet = new Set(customCategories)
             const visible = usedBuiltIn.filter((cat) => {
-              const label = CATEGORY_LABELS[cat as Category] ?? cat
+              const label = (categoryLabels as Record<string, string>)[cat] ?? cat
               return !customSet.has(label)
             })
             if (visible.length === 0) return null
@@ -114,7 +117,7 @@ export function TransactionFilters({ month, year, category, subcategory, type, a
               <>
                 <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase">Padrão (em uso)</div>
                 {visible.map((cat) => (
-                  <SelectItem key={cat} value={cat}>{CATEGORY_LABELS[cat as Category] ?? cat}</SelectItem>
+                  <SelectItem key={cat} value={cat}>{(categoryLabels as Record<string, string>)[cat] ?? cat}</SelectItem>
                 ))}
               </>
             )
