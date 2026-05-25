@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { parseWorkspace } from './workspace'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { parseWorkspace, getClientWorkspace } from './workspace'
 
 describe('parseWorkspace', () => {
   it('returns business as default when value is undefined', () => {
@@ -20,5 +20,21 @@ describe('parseWorkspace', () => {
 
   it('falls back to business for invalid values', () => {
     expect(parseWorkspace('xyz')).toBe('business')
+  })
+})
+
+describe('getClientWorkspace', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('returns business when no cookie present', () => {
+    vi.stubGlobal('document', { cookie: '' })
+    expect(getClientWorkspace()).toBe('business')
+  })
+
+  it('returns personal when cookie is workspace=personal', () => {
+    vi.stubGlobal('document', { cookie: 'workspace=personal' })
+    expect(getClientWorkspace()).toBe('personal')
   })
 })

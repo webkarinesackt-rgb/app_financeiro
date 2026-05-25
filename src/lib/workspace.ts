@@ -13,3 +13,9 @@ export async function getServerWorkspace(): Promise<WorkspaceType> {
   const store = await cookies()
   return parseWorkspace(store.get(WORKSPACE_COOKIE)?.value)
 }
+
+export function getClientWorkspace(): WorkspaceType {
+  if (typeof document === 'undefined') return DEFAULT_WORKSPACE
+  const match = document.cookie.match(/(?:^|;\s*)workspace=([^;]+)/)
+  return parseWorkspace(match?.[1])
+}
