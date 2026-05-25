@@ -1,13 +1,16 @@
 import { createClient } from '@/lib/supabase/client'
 import type { Account, AccountWithBalance } from '@/types'
+import { getClientWorkspace } from '@/lib/workspace'
 
 type AccountInput = Omit<Account, 'id' | 'user_id' | 'created_at' | 'updated_at'>
 
 export async function getAccounts(): Promise<Account[]> {
   const supabase = createClient()
+  const workspace = getClientWorkspace()
   const { data, error } = await supabase
     .from('accounts')
     .select('*')
+    .eq('workspace', workspace)
     .order('created_at', { ascending: true })
   if (error) throw error
   return data ?? []
@@ -15,10 +18,11 @@ export async function getAccounts(): Promise<Account[]> {
 
 export async function getAccountsWithBalances(): Promise<AccountWithBalance[]> {
   const supabase = createClient()
+  const workspace = getClientWorkspace()
 
   const [{ data: accounts }, { data: transactions }] = await Promise.all([
-    supabase.from('accounts').select('*').order('created_at', { ascending: true }),
-    supabase.from('transactions').select('account_id, type, amount').not('account_id', 'is', null),
+    supabase.from('accounts').select('*').eq('workspace', workspace).order('created_at', { ascending: true }),
+    supabase.from('transactions').select('account_id, type, amount').eq('workspace', workspace).not('account_id', 'is', null),
   ])
 
   return (accounts ?? []).map((account) => {
@@ -43,10 +47,11 @@ export async function createAccount(data: AccountInput): Promise<Account> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Não autenticado')
+  const workspace = getClientWorkspace()
 
   const { data: account, error } = await supabase
     .from('accounts')
-    .insert({ ...data, user_id: user.id })
+    .insert({ ...data, user_id: user.id, workspace })
     .select()
     .single()
   if (error) throw error
