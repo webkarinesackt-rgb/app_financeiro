@@ -9,22 +9,29 @@ import {
   Settings, LogOut, Plus, Handshake, PiggyBank, LineChart,
 } from 'lucide-react'
 import { Logo } from '@/components/brand/logo'
+import { useWorkspace } from '@/hooks/use-workspace'
+import type { WorkspaceType } from '@/types'
 import { toast } from 'sonner'
 import { useState } from 'react'
 import { TransactionForm } from '@/components/transactions/transaction-form'
 import { WorkspaceSwitcher } from '@/components/workspace/workspace-switcher'
 
-const navItems = [
-  { href: '/dashboard',  label: 'Início',       icon: LayoutDashboard },
-  { href: '/transactions', label: 'Lançamentos', icon: ArrowLeftRight },
-  { href: '/previsao',   label: 'Previsão',      icon: LineChart },
-  { href: '/reservas',   label: 'Reservas',      icon: PiggyBank },
+const navItems: { href: string; label: string; icon: typeof LayoutDashboard; workspaces: WorkspaceType[] }[] = [
+  { href: '/dashboard',    label: 'Início',       icon: LayoutDashboard, workspaces: ['business', 'personal'] },
+  { href: '/transactions', label: 'Lançamentos',  icon: ArrowLeftRight,  workspaces: ['business', 'personal'] },
+  { href: '/previsao',     label: 'Previsão',     icon: LineChart,       workspaces: ['business'] },
+  { href: '/reservas',     label: 'Reservas',     icon: PiggyBank,       workspaces: ['business'] },
 ]
 
 export function MobileNav() {
   const pathname = usePathname()
   const router = useRouter()
+  const workspace = useWorkspace()
   const [showForm, setShowForm] = useState(false)
+
+  // Filter visible items and always show exactly 4 (2+2) for layout symmetry,
+  // filling with fallback items if needed. For now keep up to 4.
+  const visibleNav = navItems.filter((i) => i.workspaces.includes(workspace)).slice(0, 4)
 
   async function handleLogout() {
     const supabase = createClient()
@@ -61,7 +68,7 @@ export function MobileNav() {
         <div className="mx-3 mb-2 rounded-2xl bg-stone-900/95 backdrop-blur-xl shadow-2xl shadow-stone-900/30 border border-white/5">
           <div className="flex items-center h-16 px-1">
             {/* First 2 items */}
-            {navItems.slice(0, 2).map((item) => (
+            {visibleNav.slice(0, 2).map((item) => (
               <NavItem key={item.href} item={item} pathname={pathname} />
             ))}
 
@@ -76,7 +83,7 @@ export function MobileNav() {
             </div>
 
             {/* Last 2 items */}
-            {navItems.slice(2).map((item) => (
+            {visibleNav.slice(2).map((item) => (
               <NavItem key={item.href} item={item} pathname={pathname} />
             ))}
           </div>
