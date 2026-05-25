@@ -11,6 +11,7 @@ import {
 } from '@/lib/bulk-categorize'
 import { categorizeTransactions } from '@/lib/transactions'
 import { formatCurrency } from '@/lib/format'
+import { useWorkspace } from '@/hooks/use-workspace'
 
 type Mode = 'income' | 'expense'
 
@@ -58,9 +59,35 @@ const EXPENSE_ACTIONS: ActionDef[] = [
   { label: 'Outros', shortcut: '0', customCategory: 'Outros', subcategory: null, color: 'bg-slate-600 hover:bg-slate-700', emoji: '📦' },
 ]
 
+const PERSONAL_INCOME_ACTIONS: ActionDef[] = [
+  { label: 'Salário / Pró-labore', shortcut: '1', customCategory: 'salary_personal', subcategory: null, color: 'bg-sky-600 hover:bg-sky-700', emoji: '💼' },
+  { label: 'Freelance', shortcut: '2', customCategory: 'freelance_personal', subcategory: null, color: 'bg-cyan-600 hover:bg-cyan-700', emoji: '🎨' },
+  { label: 'Reembolso', shortcut: '3', customCategory: 'reimbursement', subcategory: null, color: 'bg-teal-600 hover:bg-teal-700', emoji: '↩️' },
+  { label: 'Rendimento', shortcut: '4', customCategory: 'investment_income', subcategory: null, color: 'bg-green-600 hover:bg-green-700', emoji: '📈' },
+  { label: 'Presente recebido', shortcut: '5', customCategory: 'gift_received', subcategory: null, color: 'bg-lime-600 hover:bg-lime-700', emoji: '🎁' },
+  { label: 'Outros (receita)', shortcut: '6', customCategory: 'other_income', subcategory: null, color: 'bg-slate-600 hover:bg-slate-700', emoji: '📦' },
+]
+
+const PERSONAL_EXPENSE_ACTIONS: ActionDef[] = [
+  { label: 'Mercado', shortcut: '1', customCategory: 'groceries', subcategory: null, color: 'bg-orange-600 hover:bg-orange-700', emoji: '🛒' },
+  { label: 'Restaurante / Delivery', shortcut: '2', customCategory: 'dining', subcategory: null, color: 'bg-amber-600 hover:bg-amber-700', emoji: '🍽️' },
+  { label: 'Compras', shortcut: '3', customCategory: 'shopping', subcategory: null, color: 'bg-pink-600 hover:bg-pink-700', emoji: '🛍️' },
+  { label: 'Transporte', shortcut: '4', customCategory: 'transport_personal', subcategory: null, color: 'bg-indigo-600 hover:bg-indigo-700', emoji: '🚌' },
+  { label: 'Gasolina', shortcut: '5', customCategory: 'fuel', subcategory: null, color: 'bg-purple-600 hover:bg-purple-700', emoji: '⛽' },
+  { label: 'Moradia', shortcut: '6', customCategory: 'housing_personal', subcategory: null, color: 'bg-violet-600 hover:bg-violet-700', emoji: '🏠' },
+  { label: 'Saúde', shortcut: '7', customCategory: 'health_personal', subcategory: null, color: 'bg-red-600 hover:bg-red-700', emoji: '❤️' },
+  { label: 'Lazer', shortcut: '8', customCategory: 'leisure', subcategory: null, color: 'bg-yellow-600 hover:bg-yellow-700', emoji: '🎉' },
+  { label: 'Assinaturas', shortcut: '9', customCategory: 'subscriptions_personal', subcategory: null, color: 'bg-cyan-700 hover:bg-cyan-800', emoji: '📱' },
+  { label: 'Educação', shortcut: 'e', customCategory: 'education_personal', subcategory: null, color: 'bg-blue-600 hover:bg-blue-700', emoji: '📚' },
+  { label: 'Pet', shortcut: 'p', customCategory: 'pet', subcategory: null, color: 'bg-rose-500 hover:bg-rose-600', emoji: '🐾' },
+  { label: 'Outros (despesa)', shortcut: '0', customCategory: 'other_expense', subcategory: null, color: 'bg-slate-600 hover:bg-slate-700', emoji: '📦' },
+]
+
 const CURRENT_YEAR_START = `${new Date().getFullYear()}-01-01`
 
 export default function CategorizarPage() {
+  const workspace = useWorkspace()
+  const isPersonal = workspace === 'personal'
   const [clients, setClients] = useState<UncategorizedClient[]>([])
   const [index, setIndex] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -70,7 +97,9 @@ export default function CategorizarPage() {
   const [mode, setMode] = useState<Mode>('income')
   const [origin, setOrigin] = useState<ExpenseOrigin>('all')
 
-  const ACTIONS = mode === 'income' ? INCOME_ACTIONS : EXPENSE_ACTIONS
+  const ACTIONS = mode === 'income'
+    ? (isPersonal ? PERSONAL_INCOME_ACTIONS : INCOME_ACTIONS)
+    : (isPersonal ? PERSONAL_EXPENSE_ACTIONS : EXPENSE_ACTIONS)
 
   const fetchClients = useCallback(async () => {
     setLoading(true)
