@@ -10,8 +10,9 @@ import {
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/format'
-import { CATEGORY_LABELS, CATEGORY_COLORS } from '@/types'
+import { getCategoryColorByWorkspace } from '@/types'
 import type { CategoryExpense } from '@/types'
+import { useWorkspace } from '@/hooks/use-workspace'
 
 interface ExpenseChartProps {
   data: CategoryExpense[]
@@ -33,6 +34,8 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: Toolti
 }
 
 export function ExpenseChart({ data }: ExpenseChartProps) {
+  const workspace = useWorkspace()
+
   if (data.length === 0) {
     return (
       <Card className="border border-slate-100 shadow-sm">
@@ -51,9 +54,9 @@ export function ExpenseChart({ data }: ExpenseChartProps) {
   }
 
   const chartData = data.map((item) => ({
-    name: CATEGORY_LABELS[item.category],
+    name: item.customLabel ?? String(item.category),
     value: item.amount,
-    color: CATEGORY_COLORS[item.category],
+    color: getCategoryColorByWorkspace(workspace, String(item.category), item.customLabel),
   }))
 
   return (

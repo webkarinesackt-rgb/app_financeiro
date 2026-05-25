@@ -20,11 +20,13 @@ import { getCreditCards } from '@/lib/credit-cards'
 import {
   CATEGORY_LABELS, RECURRENCE_LABELS, PAYMENT_METHOD_LABELS,
   INCOME_CATEGORIES, EXPENSE_CATEGORIES, ACCOUNT_PAYMENT_METHODS,
+  PERSONAL_INCOME_CATEGORIES, PERSONAL_EXPENSE_CATEGORIES, PERSONAL_CATEGORY_LABELS,
   getSubcategoryOptions,
   type Transaction, type TransactionFormData, type TransactionType,
   type Category, type RecurrenceInterval, type PaymentMethod,
   type Account, type CreditCard,
 } from '@/types'
+import { useWorkspace } from '@/hooks/use-workspace'
 
 interface TransactionFormProps {
   open: boolean
@@ -42,10 +44,15 @@ export function TransactionForm({ open, onClose, onSuccess, transaction, default
   const [accounts, setAccounts] = useState<Account[]>([])
   const [cards, setCards] = useState<CreditCard[]>([])
 
+  const workspace = useWorkspace()
+  const isPersonal = workspace === 'personal'
+  const defaultIncomeCategory = isPersonal ? 'salary_personal' : 'salary'
+  const defaultExpenseCategory = isPersonal ? 'groceries' : 'food'
+
   const [type, setType] = useState<TransactionType>(transaction?.type ?? defaultType)
   const [amount, setAmount] = useState(transaction ? String(transaction.amount) : '')
   const [description, setDescription] = useState(transaction?.description ?? '')
-  const [category, setCategory] = useState<Category>(transaction?.category ?? (defaultType === 'income' ? 'salary' : 'food'))
+  const [category, setCategory] = useState<string>(transaction?.category ?? (defaultType === 'income' ? defaultIncomeCategory : defaultExpenseCategory))
   const [customCategory, setCustomCategory] = useState(transaction?.custom_category ?? '')
   const [subcategory, setSubcategory] = useState(transaction?.subcategory ?? '')
   const [existingCustoms, setExistingCustoms] = useState<string[]>([])
@@ -65,7 +72,10 @@ export function TransactionForm({ open, onClose, onSuccess, transaction, default
   const [recurrenceInterval, setRecurrenceInterval] = useState<RecurrenceInterval>(transaction?.recurrence_interval ?? 'monthly')
 
   const usingCard = !!creditCardId
-  const categories = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
+  const incomeCategories = isPersonal ? PERSONAL_INCOME_CATEGORIES : INCOME_CATEGORIES
+  const expenseCategories = isPersonal ? PERSONAL_EXPENSE_CATEGORIES : EXPENSE_CATEGORIES
+  const categoryLabels = isPersonal ? PERSONAL_CATEGORY_LABELS : CATEGORY_LABELS
+  const categories = type === 'income' ? incomeCategories : expenseCategories
 
   useEffect(() => {
     if (!open) return
@@ -87,7 +97,7 @@ export function TransactionForm({ open, onClose, onSuccess, transaction, default
 
   function handleTypeChange(newType: TransactionType) {
     setType(newType)
-    setCategory(newType === 'income' ? 'salary' : 'food')
+    setCategory(newType === 'income' ? defaultIncomeCategory : defaultExpenseCategory)
     setCustomCategory('')
     setCreditCardId('')
     setIsInstallment(false)
@@ -142,7 +152,7 @@ export function TransactionForm({ open, onClose, onSuccess, transaction, default
 
     const data: TransactionFormData = {
       type, amount: numAmount, description,
-      category,
+      category: category as Category,
       custom_category: finalCustom,
       subcategory: finalSubcategory,
       date,
@@ -400,7 +410,7 @@ export function TransactionForm({ open, onClose, onSuccess, transaction, default
                 <SelectItem value="__new__">+ Criar nova categoria</SelectItem>
                 <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase">Padrão</div>
                 {categories.filter((c) => c !== 'custom').map((cat) => (
-                  <SelectItem key={cat} value={cat}>{CATEGORY_LABELS[cat]}</SelectItem>
+                  <SelectItem key={cat} value={cat}>{categoryLabels[cat as keyof typeof categoryLabels]}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

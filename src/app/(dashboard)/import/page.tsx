@@ -13,8 +13,9 @@ import { getCreditCards } from '@/lib/credit-cards'
 import { formatCurrency } from '@/lib/format'
 import { parseBankCsv } from '@/lib/bank-csv'
 import type { CreditCard } from '@/types'
-import { CATEGORY_LABELS, PAYMENT_METHOD_LABELS } from '@/types'
+import { CATEGORY_LABELS, PAYMENT_METHOD_LABELS, getCategoryLabelByWorkspace } from '@/types'
 import type { Account, Category, PaymentMethod } from '@/types'
+import { useWorkspace } from '@/hooks/use-workspace'
 
 // Heurística: descrições que sugerem movimentação interna (entre contas
 // da mesma empresa, repasses de gateway, aplicações em CDB/poupança).
@@ -62,6 +63,7 @@ interface ChatMessage {
 }
 
 export default function ImportPage() {
+  const workspace = useWorkspace()
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: 'assistant',
@@ -420,7 +422,7 @@ export default function ImportPage() {
                             <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                               <span className="text-xs text-slate-400">{tx.date}</span>
                               <Badge variant="outline" className={`text-xs py-0 px-1.5 h-4 ${tx.custom_category ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : ''}`}>
-                                {tx.custom_category ?? CATEGORY_LABELS[tx.category] ?? tx.category}
+                                {getCategoryLabelByWorkspace(workspace, tx.category, tx.custom_category)}
                               </Badge>
                               <span className="text-xs text-slate-400">
                                 {PAYMENT_METHOD_LABELS[tx.payment_method] ?? tx.payment_method}

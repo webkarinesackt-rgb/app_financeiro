@@ -6,35 +6,43 @@ import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { LayoutDashboard, ArrowLeftRight, BarChart3, Settings, LogOut, ChevronDown, CalendarCheck, Handshake, PiggyBank, LineChart, AlertCircle, Sparkles, Activity } from 'lucide-react'
+import { LayoutDashboard, ArrowLeftRight, BarChart3, Settings, LogOut, ChevronDown, CalendarCheck, Handshake, PiggyBank, LineChart, AlertCircle, Sparkles, Activity, Upload } from 'lucide-react'
 import { Logo } from '@/components/brand/logo'
+import { WorkspaceSwitcher } from '@/components/workspace/workspace-switcher'
+import { useWorkspace } from '@/hooks/use-workspace'
+import type { WorkspaceType } from '@/types'
 import { toast } from 'sonner'
 import { useState } from 'react'
 
-const navItems = [
-  { href: '/panorama', label: 'Panorama', icon: Activity },
-  { href: '/dashboard', label: 'Visão Geral', icon: LayoutDashboard },
-  { href: '/transactions', label: 'Lançamentos', icon: ArrowLeftRight },
-  { href: '/a-cobrar', label: 'A Cobrar', icon: AlertCircle },
-  { href: '/closings', label: 'Fechamentos', icon: Handshake },
-  { href: '/reservas', label: 'Reservas', icon: PiggyBank },
-  { href: '/previsao', label: 'Previsão', icon: LineChart },
-  { href: '/reports', label: 'Relatórios', icon: BarChart3 },
-  { href: '/cashflow', label: 'Fluxo de Caixa', icon: CalendarCheck },
-  { href: '/categorizar', label: 'Categorizar', icon: Sparkles },
+const navItems: { href: string; label: string; icon: typeof LayoutDashboard; workspaces: WorkspaceType[] }[] = [
+  { href: '/panorama',     label: 'Panorama',       icon: Activity,        workspaces: ['business'] },
+  { href: '/dashboard',    label: 'Visão Geral',    icon: LayoutDashboard, workspaces: ['business', 'personal'] },
+  { href: '/transactions', label: 'Lançamentos',    icon: ArrowLeftRight,  workspaces: ['business', 'personal'] },
+  { href: '/a-cobrar',     label: 'A Cobrar',       icon: AlertCircle,     workspaces: ['business'] },
+  { href: '/closings',     label: 'Fechamentos',    icon: Handshake,       workspaces: ['business'] },
+  { href: '/reservas',     label: 'Reservas',       icon: PiggyBank,       workspaces: ['business'] },
+  { href: '/previsao',     label: 'Previsão',       icon: LineChart,       workspaces: ['business'] },
+  { href: '/reports',      label: 'Relatórios',     icon: BarChart3,       workspaces: ['business', 'personal'] },
+  { href: '/cashflow',     label: 'Fluxo de Caixa', icon: CalendarCheck,   workspaces: ['business'] },
+  { href: '/categorizar',  label: 'Categorizar',    icon: Sparkles,        workspaces: ['business', 'personal'] },
+  { href: '/import',       label: 'Importar',       icon: Upload,          workspaces: ['business', 'personal'] },
 ]
 
-const settingsItems = [
-  { href: '/settings/accounts', label: 'Contas' },
-  { href: '/settings/cards', label: 'Cartões de Crédito' },
-  { href: '/settings/categories', label: 'Categorias' },
-  { href: '/settings/integrations', label: 'Integrações (Asaas)' },
+const settingsItems: { href: string; label: string; workspaces: WorkspaceType[] }[] = [
+  { href: '/settings/accounts',     label: 'Contas',              workspaces: ['business', 'personal'] },
+  { href: '/settings/cards',        label: 'Cartões de Crédito',  workspaces: ['business', 'personal'] },
+  { href: '/settings/categories',   label: 'Categorias',          workspaces: ['business', 'personal'] },
+  { href: '/settings/integrations', label: 'Integrações (Asaas)', workspaces: ['business'] },
 ]
 
 export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
+  const workspace = useWorkspace()
   const [settingsOpen, setSettingsOpen] = useState(pathname.startsWith('/settings'))
+
+  const visibleNav = navItems.filter((i) => i.workspaces.includes(workspace))
+  const visibleSettings = settingsItems.filter((i) => i.workspaces.includes(workspace))
 
   async function handleLogout() {
     const supabase = createClient()
@@ -46,13 +54,14 @@ export function Sidebar() {
 
   return (
     <aside className="flex flex-col w-64 min-h-screen bg-white/80 backdrop-blur-sm border-r border-stone-200/60 px-3 py-6 gap-1 shrink-0">
-      <div className="px-2 mb-7">
+      <div className="px-2 mb-4 flex flex-col gap-3">
         <Logo size="md" />
+        <WorkspaceSwitcher />
       </div>
       <div className="hairline mb-4 mx-2" />
 
       <nav className="flex flex-col gap-0.5 flex-1">
-        {navItems.map((item) => {
+        {visibleNav.map((item) => {
           const Icon = item.icon
           const active = pathname === item.href
           return (
@@ -89,7 +98,7 @@ export function Sidebar() {
 
         {settingsOpen && (
           <div className="ml-7 mt-1 flex flex-col gap-0.5 border-l border-stone-200 pl-3">
-            {settingsItems.map((item) => (
+            {visibleSettings.map((item) => (
               <Link key={item.href} href={item.href}>
                 <span className={cn(
                   'flex items-center px-2 py-1.5 rounded-md text-xs transition-colors',

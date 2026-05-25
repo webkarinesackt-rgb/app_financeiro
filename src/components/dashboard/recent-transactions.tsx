@@ -1,17 +1,21 @@
+'use client'
+
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ArrowUpRight } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/format'
-import { getCategoryLabel } from '@/types'
+import { getCategoryLabelByWorkspace } from '@/types'
 import type { Transaction } from '@/types'
+import { useWorkspace } from '@/hooks/use-workspace'
 
 interface RecentTransactionsProps {
   transactions: Transaction[]
 }
 
 export function RecentTransactions({ transactions }: RecentTransactionsProps) {
+  const workspace = useWorkspace()
   return (
     <Card className="border border-slate-100 shadow-sm">
       <CardHeader className="pb-2 flex flex-row items-center justify-between">
@@ -44,7 +48,7 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
                 </div>
                 <div className="flex items-center gap-2 shrink-0 ml-3">
                   <Badge variant="outline" className="text-xs hidden sm:flex">
-                    {getCategoryLabel(t.category, t.custom_category)}
+                    {getCategoryLabelByWorkspace(workspace, t.category, t.custom_category)}
                   </Badge>
                   <span className={`text-sm font-semibold ${
                     t.type === 'income' ? 'text-emerald-600' : 'text-red-500'

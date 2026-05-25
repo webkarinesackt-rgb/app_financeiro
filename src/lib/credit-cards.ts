@@ -1,13 +1,16 @@
 import { createClient } from '@/lib/supabase/client'
 import type { CreditCard, CreditCardWithUsage } from '@/types'
+import { getClientWorkspace } from '@/lib/workspace'
 
-type CardInput = Omit<CreditCard, 'id' | 'user_id' | 'created_at' | 'updated_at'>
+type CardInput = Omit<CreditCard, 'id' | 'user_id' | 'workspace' | 'created_at' | 'updated_at'>
 
 export async function getCreditCards(): Promise<CreditCard[]> {
   const supabase = createClient()
+  const workspace = getClientWorkspace()
   const { data, error } = await supabase
     .from('credit_cards')
     .select('*')
+    .eq('workspace', workspace)
     .order('created_at', { ascending: true })
   if (error) throw error
   return data ?? []
@@ -15,14 +18,16 @@ export async function getCreditCards(): Promise<CreditCard[]> {
 
 export async function getCreditCardsWithUsage(month: number, year: number): Promise<CreditCardWithUsage[]> {
   const supabase = createClient()
+  const workspace = getClientWorkspace()
   const start = new Date(year, month - 1, 1).toISOString().split('T')[0]
   const end = new Date(year, month, 0).toISOString().split('T')[0]
 
   const [{ data: cards }, { data: transactions }] = await Promise.all([
-    supabase.from('credit_cards').select('*').order('created_at', { ascending: true }),
+    supabase.from('credit_cards').select('*').eq('workspace', workspace).order('created_at', { ascending: true }),
     supabase
       .from('transactions')
       .select('credit_card_id, amount')
+      .eq('workspace', workspace)
       .eq('type', 'expense')
       .not('credit_card_id', 'is', null)
       .gte('date', start)
@@ -41,10 +46,11 @@ export async function createCreditCard(data: CardInput): Promise<CreditCard> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Não autenticado')
+  const workspace = getClientWorkspace()
 
   const { data: card, error } = await supabase
     .from('credit_cards')
-    .insert({ ...data, user_id: user.id })
+    .insert({ ...data, user_id: user.id, workspace })
     .select()
     .single()
   if (error) throw error

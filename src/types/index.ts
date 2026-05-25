@@ -4,6 +4,15 @@ export type TransactionType = 'income' | 'expense'
 export type RecurrenceInterval = 'daily' | 'weekly' | 'monthly' | 'yearly'
 export type PaymentMethod = 'pix' | 'debit' | 'credit' | 'cash' | 'transfer' | 'boleto' | 'other'
 
+// ─── Workspace Types ─────────────────────────────────────────────────────────
+
+export type WorkspaceType = 'business' | 'personal'
+
+export const WORKSPACE_LABELS: Record<WorkspaceType, string> = {
+  business: 'Fysi',
+  personal: 'Pessoal',
+}
+
 export type Category =
   | 'salary' | 'freelance' | 'project' | 'consulting' | 'commission'
   | 'bonus' | 'rental' | 'digital_products' | 'investment' | 'gift' | 'refund'
@@ -14,6 +23,7 @@ export type Category =
 export interface Transaction {
   id: string
   user_id: string
+  workspace: WorkspaceType
   type: TransactionType
   amount: number
   description: string
@@ -60,6 +70,7 @@ export type AccountKind = 'operational' | 'reserve'
 export interface Account {
   id: string
   user_id: string
+  workspace: WorkspaceType
   name: string
   type: AccountType
   kind: AccountKind
@@ -76,6 +87,7 @@ export interface Account {
 export interface CreditCard {
   id: string
   user_id: string
+  workspace: WorkspaceType
   name: string
   bank: string | null
   color: string
@@ -401,6 +413,119 @@ export const BANKS = [
 export function getCategoryLabel(category: Category, customCategory?: string | null): string {
   if (category === 'custom' && customCategory) return customCategory
   return CATEGORY_LABELS[category]
+}
+
+// ─── Personal Workspace Categories ─────────────────────────────────────────
+
+export type PersonalCategory =
+  // Receita
+  | 'salary_personal' | 'freelance_personal' | 'reimbursement'
+  | 'gift_received' | 'investment_income' | 'other_income'
+  // Despesa
+  | 'groceries' | 'dining' | 'shopping' | 'car' | 'fuel'
+  | 'transport_personal' | 'housing_personal' | 'health_personal' | 'leisure' | 'clothing_personal'
+  | 'subscriptions_personal' | 'travel' | 'gifts_given' | 'education_personal'
+  | 'pet' | 'personal_care' | 'taxes_personal' | 'donations'
+  | 'other_expense' | 'custom'
+
+export const PERSONAL_CATEGORY_LABELS: Record<PersonalCategory, string> = {
+  // Receita
+  salary_personal: 'Salário / Pró-labore',
+  freelance_personal: 'Freelance',
+  reimbursement: 'Reembolso',
+  gift_received: 'Presente recebido',
+  investment_income: 'Rendimento',
+  other_income: 'Outros (receita)',
+  // Despesa
+  groceries: 'Mercado',
+  dining: 'Restaurante / iFood / Delivery',
+  shopping: 'Compras',
+  car: 'Carro',
+  fuel: 'Gasolina / Combustível',
+  transport_personal: 'Transporte (Uber, táxi, público)',
+  housing_personal: 'Moradia (aluguel, contas)',
+  health_personal: 'Saúde',
+  leisure: 'Lazer / Entretenimento',
+  clothing_personal: 'Vestuário',
+  subscriptions_personal: 'Assinaturas',
+  travel: 'Viagem',
+  gifts_given: 'Presentes (pra outros)',
+  education_personal: 'Educação',
+  pet: 'Pet',
+  personal_care: 'Cuidados pessoais',
+  taxes_personal: 'Impostos / Taxas',
+  donations: 'Doações',
+  other_expense: 'Outros (despesa)',
+  custom: 'Personalizada',
+}
+
+export const PERSONAL_CATEGORY_COLORS: Record<PersonalCategory, string> = {
+  // Receita — paleta verde-azulada (distinta da Fysi que é verde-esmeralda)
+  salary_personal: '#0ea5e9',
+  freelance_personal: '#06b6d4',
+  reimbursement: '#14b8a6',
+  gift_received: '#84cc16',
+  investment_income: '#22c55e',
+  other_income: '#a3e635',
+  // Despesa — paleta âmbar/violeta/rosa (distinta dos vermelhos da Fysi)
+  groceries: '#f97316',
+  dining: '#fb923c',
+  shopping: '#ec4899',
+  car: '#a855f7',
+  fuel: '#d946ef',
+  transport_personal: '#6366f1',
+  housing_personal: '#8b5cf6',
+  health_personal: '#ef4444',
+  leisure: '#f59e0b',
+  clothing_personal: '#e11d48',
+  subscriptions_personal: '#0891b2',
+  travel: '#0284c7',
+  gifts_given: '#db2777',
+  education_personal: '#2563eb',
+  pet: '#f472b6',
+  personal_care: '#c026d3',
+  taxes_personal: '#dc2626',
+  donations: '#16a34a',
+  other_expense: '#94a3b8',
+  custom: '#64748b',
+}
+
+export const PERSONAL_INCOME_CATEGORIES: PersonalCategory[] = [
+  'salary_personal', 'freelance_personal', 'reimbursement',
+  'gift_received', 'investment_income', 'other_income',
+]
+
+export const PERSONAL_EXPENSE_CATEGORIES: PersonalCategory[] = [
+  'groceries', 'dining', 'shopping', 'car', 'fuel',
+  'transport_personal', 'housing_personal', 'health_personal', 'leisure', 'clothing_personal',
+  'subscriptions_personal', 'travel', 'gifts_given', 'education_personal',
+  'pet', 'personal_care', 'taxes_personal', 'donations', 'other_expense',
+]
+
+export function getCategoryLabelByWorkspace(
+  workspace: WorkspaceType,
+  category: string,
+  customCategory?: string | null,
+): string {
+  if (category === 'custom' && customCategory) return customCategory
+  if (workspace === 'personal') {
+    return PERSONAL_CATEGORY_LABELS[category as PersonalCategory] ?? category
+  }
+  return CATEGORY_LABELS[category as Category] ?? category
+}
+
+export function getCategoryColorByWorkspace(
+  workspace: WorkspaceType,
+  category: string,
+  customCategory?: string | null,
+): string {
+  if (category === 'custom' && customCategory) {
+    return (workspace === 'personal' ? PERSONAL_CATEGORY_COLORS.custom : CATEGORY_COLORS.custom)
+  }
+  if (workspace === 'personal') {
+    return PERSONAL_CATEGORY_COLORS[category as PersonalCategory] ?? '#94a3b8'
+  }
+  return CATEGORY_COLORS[category as Category] ?? '#94a3b8'
 }
 
 export function getBankName(bankId: string | null | undefined): string {

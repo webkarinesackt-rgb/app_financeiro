@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
 
   const admin = createAdminClient()
 
+  // Asaas integrations are always Fysi (business workspace).
   // Se não veio account_id, cria uma conta nova com o nome da integração.
   let accountId = body.account_id ?? null
   if (!accountId) {
@@ -55,6 +56,7 @@ export async function POST(request: NextRequest) {
         type: 'checking',
         bank: 'asaas',
         color: '#06b6d4',
+        workspace: 'business',
       })
       .select('id')
       .single()

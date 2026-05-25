@@ -1,8 +1,19 @@
 import { addMonths } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
-import type { Transaction, TransactionFormData } from '@/types'
+import type { Transaction, TransactionFormData, WorkspaceType } from '@/types'
 import { CATEGORY_LABELS } from '@/types'
 import { buildMerchantCategoryMap, matchMerchantCategory, type CategoryMatch } from '@/lib/expense-key'
+import { getClientWorkspace } from '@/lib/workspace'
+
+// ─── Date range helpers ───────────────────────────────────────────────────────
+
+export function computeDateRange(from: string, to: string): { start: string; end: string } {
+  const [fy, fm] = from.split('-').map(Number)
+  const [ty, tm] = to.split('-').map(Number)
+  const start = new Date(fy, fm - 1, 1).toISOString().split('T')[0]
+  const end = new Date(ty, tm, 0).toISOString().split('T')[0] // day 0 of next month = last day of month
+  return { start, end }
+}
 
 // Extrai o "nome do cliente" da descrição (helper compartilhado).
 function extractClientPattern(description: string): string | null {
@@ -30,10 +41,12 @@ export async function applyCategoryToSimilarTransactions(
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return 0
+  const workspace = getClientWorkspace()
 
   const { data: similar } = await supabase
     .from('transactions')
     .select('id, custom_category, subcategory, category')
+    .eq('workspace', workspace)
     .eq('type', type)
     .eq('user_id', user.id)
     .neq('id', sourceId)
@@ -69,6 +82,7 @@ export async function findCategoryByDescriptionPattern(
 ): Promise<{ custom_category: string; subcategory: string | null } | null> {
   if (!description) return null
   const supabase = createClient()
+  const workspace = getClientWorkspace()
 
   // Extrai possíveis "nomes de cliente" da descrição
   const patterns: string[] = []
@@ -85,6 +99,7 @@ export async function findCategoryByDescriptionPattern(
     const { data } = await supabase
       .from('transactions')
       .select('custom_category, subcategory')
+      .eq('workspace', workspace)
       .eq('type', type)
       .eq('category', 'custom')
       .not('custom_category', 'is', null)
@@ -106,7 +121,8 @@ export async function findCategoryByDescriptionPattern(
 // de uma lista enorme de padrão que não serve pra ele.
 export async function getUsedBuiltInCategories(type?: 'income' | 'expense'): Promise<string[]> {
   const supabase = createClient()
-  let query = supabase.from('transactions').select('category').neq('category', 'custom')
+  const workspace = getClientWorkspace()
+  let query = supabase.from('transactions').select('category').eq('workspace', workspace).neq('category', 'custom')
   if (type) query = query.eq('type', type)
   const { data, error } = await query
   if (error || !data) return []
@@ -122,9 +138,11 @@ export async function getUsedBuiltInCategories(type?: 'income' | 'expense'): Pro
 // por tipo (income/expense). Usado pra montar dropdowns de filtro.
 export async function getCustomCategories(type?: 'income' | 'expense'): Promise<string[]> {
   const supabase = createClient()
+  const workspace = getClientWorkspace()
   let query = supabase
     .from('transactions')
     .select('custom_category, type')
+    .eq('workspace', workspace)
     .eq('category', 'custom')
     .not('custom_category', 'is', null)
 
@@ -141,16 +159,23 @@ export async function getCustomCategories(type?: 'income' | 'expense'): Promise<
 export async function getTransactions(filters?: {
   month?: number
   year?: number
+  from?: string   // 'YYYY-MM' — takes priority over month/year
+  to?: string     // 'YYYY-MM' — takes priority over month/year
   category?: string
   subcategory?: string
   type?: string
   accountId?: string
   creditCardId?: string
+  workspace?: WorkspaceType
 }): Promise<Transaction[]> {
   const supabase = createClient()
-  let query = supabase.from('transactions').select('*').order('date', { ascending: false })
+  const workspace = filters?.workspace ?? getClientWorkspace()
+  let query = supabase.from('transactions').select('*').eq('workspace', workspace).order('date', { ascending: false })
 
-  if (filters?.month && filters?.year) {
+  if (filters?.from && filters?.to) {
+    const { start, end } = computeDateRange(filters.from, filters.to)
+    query = query.gte('date', start).lte('date', end)
+  } else if (filters?.month && filters?.year) {
     const start = new Date(filters.year, filters.month - 1, 1).toISOString().split('T')[0]
     const end = new Date(filters.year, filters.month, 0).toISOString().split('T')[0]
     query = query.gte('date', start).lte('date', end)
@@ -189,6 +214,7 @@ export async function createTransaction(
   if (!user) throw new Error('Não autenticado')
 
   const { installment_total, ...baseData } = data
+  const workspace = getClientWorkspace()
 
   // Credit card installments (expense)
   if (installment_total && installment_total > 1 && data.credit_card_id) {
@@ -199,6 +225,7 @@ export async function createTransaction(
     const records = Array.from({ length: installment_total }, (_, i) => ({
       ...baseData,
       user_id: user.id,
+      workspace,
       amount: amountPerInstallment,
       description: `${data.description} (${i + 1}/${installment_total})`,
       date: addMonths(baseDate, i).toISOString().split('T')[0],
@@ -225,6 +252,7 @@ export async function createTransaction(
     const records = Array.from({ length: installment_total }, (_, i) => ({
       ...baseData,
       user_id: user.id,
+      workspace,
       amount: amountPerInstallment,
       description: `${data.description} (${i + 1}/${installment_total})`,
       date: addMonths(baseDate, delay + i).toISOString().split('T')[0],
@@ -243,7 +271,7 @@ export async function createTransaction(
 
   const { data: transaction, error } = await supabase
     .from('transactions')
-    .insert({ ...baseData, user_id: user.id, installment_total: null })
+    .insert({ ...baseData, user_id: user.id, workspace, installment_total: null })
     .select()
     .single()
   if (error) throw error
@@ -344,9 +372,11 @@ export async function inferCategoriesFromHistory(
   if (descriptions.length === 0) return result
 
   const supabase = createClient()
+  const workspace = getClientWorkspace()
   const { data } = await supabase
     .from('transactions')
     .select('description, custom_category, subcategory')
+    .eq('workspace', workspace)
     .eq('type', 'expense')
     .eq('category', 'custom')
     .not('custom_category', 'is', null)

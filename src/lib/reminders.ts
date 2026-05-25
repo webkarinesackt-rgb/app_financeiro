@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import { getClientWorkspace } from '@/lib/workspace'
 
 export type ReminderType = 'payment_due' | 'invoice_pending'
 
@@ -21,7 +22,8 @@ export type ReminderInput = Pick<Reminder, 'type' | 'title'> &
 
 export async function listReminders(type: ReminderType, opts: { completed?: boolean } = {}): Promise<Reminder[]> {
   const supabase = createClient()
-  let q = supabase.from('reminders').select('*').eq('type', type)
+  const workspace = getClientWorkspace()
+  let q = supabase.from('reminders').select('*').eq('workspace', workspace).eq('type', type)
   if (typeof opts.completed === 'boolean') q = q.eq('completed', opts.completed)
   const { data, error } = await q.order('due_date', { ascending: true, nullsFirst: false })
   if (error) throw error
@@ -32,9 +34,10 @@ export async function createReminder(input: ReminderInput): Promise<Reminder> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Não autenticado')
+  const workspace = getClientWorkspace()
   const { data, error } = await supabase
     .from('reminders')
-    .insert({ ...input, user_id: user.id })
+    .insert({ ...input, user_id: user.id, workspace })
     .select()
     .single()
   if (error) throw error
