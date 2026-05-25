@@ -12,6 +12,7 @@ import { Logo } from '@/components/brand/logo'
 import { toast } from 'sonner'
 import { useState } from 'react'
 import { TransactionForm } from '@/components/transactions/transaction-form'
+import { WorkspaceSwitcher } from '@/components/workspace/workspace-switcher'
 
 const navItems = [
   { href: '/dashboard',  label: 'Início',       icon: LayoutDashboard },
@@ -41,6 +42,7 @@ export function MobileNav() {
       <header className="md:hidden sticky top-0 z-40 flex items-center justify-between px-4 h-14 bg-white/80 backdrop-blur-md border-b border-stone-200/60">
         <Logo size="sm" />
         <div className="flex items-center gap-2">
+          <WorkspaceSwitcher />
           <button
             onClick={handleLogout}
             className="flex items-center justify-center h-8 w-8 rounded-full text-stone-400 hover:text-red-500 hover:bg-red-50 transition-all"
