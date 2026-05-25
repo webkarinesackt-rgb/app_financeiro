@@ -3,14 +3,17 @@ import type {
   FixedCost, FixedCostFormData, FixedCostFrequency, FixedCostCategory,
 } from '@/types'
 import { FREQUENCY_TO_MONTHLY } from '@/types'
+import { getClientWorkspace } from '@/lib/workspace'
 
 const ROW = 'id, user_id, name, amount, frequency, category, notes, active, created_at, updated_at'
 
 export async function getFixedCosts(): Promise<FixedCost[]> {
   const supabase = createClient()
+  const workspace = getClientWorkspace()
   const { data, error } = await supabase
     .from('fixed_costs')
     .select(ROW)
+    .eq('workspace', workspace)
     .order('amount', { ascending: false })
   if (error) throw error
   return (data ?? []) as FixedCost[]
@@ -20,10 +23,11 @@ export async function createFixedCost(data: FixedCostFormData): Promise<FixedCos
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Não autenticado')
+  const workspace = getClientWorkspace()
 
   const { data: row, error } = await supabase
     .from('fixed_costs')
-    .insert({ ...data, user_id: user.id })
+    .insert({ ...data, user_id: user.id, workspace })
     .select(ROW)
     .single()
   if (error) throw error
@@ -34,8 +38,9 @@ export async function createFixedCostsBulk(items: FixedCostFormData[]): Promise<
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Não autenticado')
+  const workspace = getClientWorkspace()
 
-  const payload = items.map((d) => ({ ...d, user_id: user.id }))
+  const payload = items.map((d) => ({ ...d, user_id: user.id, workspace }))
   const { data: rows, error } = await supabase
     .from('fixed_costs')
     .insert(payload)
