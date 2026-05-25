@@ -5,6 +5,16 @@ import { CATEGORY_LABELS } from '@/types'
 import { buildMerchantCategoryMap, matchMerchantCategory, type CategoryMatch } from '@/lib/expense-key'
 import { getClientWorkspace } from '@/lib/workspace'
 
+// ─── Date range helpers ───────────────────────────────────────────────────────
+
+export function computeDateRange(from: string, to: string): { start: string; end: string } {
+  const [fy, fm] = from.split('-').map(Number)
+  const [ty, tm] = to.split('-').map(Number)
+  const start = new Date(fy, fm - 1, 1).toISOString().split('T')[0]
+  const end = new Date(ty, tm, 0).toISOString().split('T')[0] // day 0 of next month = last day of month
+  return { start, end }
+}
+
 // Extrai o "nome do cliente" da descrição (helper compartilhado).
 function extractClientPattern(description: string): string | null {
   const m1 = description.match(/^([^—]+?)\s*—/)
@@ -149,6 +159,8 @@ export async function getCustomCategories(type?: 'income' | 'expense'): Promise<
 export async function getTransactions(filters?: {
   month?: number
   year?: number
+  from?: string   // 'YYYY-MM' — takes priority over month/year
+  to?: string     // 'YYYY-MM' — takes priority over month/year
   category?: string
   subcategory?: string
   type?: string
@@ -160,7 +172,10 @@ export async function getTransactions(filters?: {
   const workspace = filters?.workspace ?? getClientWorkspace()
   let query = supabase.from('transactions').select('*').eq('workspace', workspace).order('date', { ascending: false })
 
-  if (filters?.month && filters?.year) {
+  if (filters?.from && filters?.to) {
+    const { start, end } = computeDateRange(filters.from, filters.to)
+    query = query.gte('date', start).lte('date', end)
+  } else if (filters?.month && filters?.year) {
     const start = new Date(filters.year, filters.month - 1, 1).toISOString().split('T')[0]
     const end = new Date(filters.year, filters.month, 0).toISOString().split('T')[0]
     query = query.gte('date', start).lte('date', end)
