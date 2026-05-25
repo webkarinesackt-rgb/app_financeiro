@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { extractExpenseKey } from '@/lib/expense-key'
+import { getClientWorkspace } from '@/lib/workspace'
 
 export interface UncategorizedClient {
   name: string             // nome extraído da description
@@ -34,9 +35,11 @@ export async function getUncategorizedExpenses(
   origin: ExpenseOrigin = 'all',
 ): Promise<UncategorizedClient[]> {
   const supabase = createClient()
+  const workspace = getClientWorkspace()
   let query = supabase
     .from('transactions')
     .select('id, description, amount, date, credit_card_id, integration_id')
+    .eq('workspace', workspace)
     .eq('type', 'expense')
     .is('custom_category', null)
 
@@ -78,9 +81,11 @@ export async function getUncategorizedExpenses(
 // fromDate: opcional, filtra só transações a partir dessa data (YYYY-MM-DD).
 export async function getUncategorizedLPClients(fromDate?: string): Promise<UncategorizedClient[]> {
   const supabase = createClient()
+  const workspace = getClientWorkspace()
   let query = supabase
     .from('transactions')
     .select('id, description, amount, date')
+    .eq('workspace', workspace)
     .eq('custom_category', 'Receita Landing Page / Site')
     .eq('type', 'income')
     .is('subcategory', null)
@@ -125,6 +130,7 @@ export async function categorizeExpenseByPattern(
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return 0
+  const workspace = getClientWorkspace()
 
   const clean = pattern.replace(/[%_]/g, '').trim()
   if (clean.length < 3) return 0
@@ -137,6 +143,7 @@ export async function categorizeExpenseByPattern(
       updated_at: new Date().toISOString(),
     })
     .eq('user_id', user.id)
+    .eq('workspace', workspace)
     .eq('type', 'expense')
     .ilike('description', `%${clean}%`)
     .select('id')
@@ -155,6 +162,7 @@ export async function categorizeClientByName(
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return 0
+  const workspace = getClientWorkspace()
 
   const clean = clientName.replace(/[%_]/g, '').trim()
   if (clean.length < 3) return 0
@@ -170,6 +178,7 @@ export async function categorizeClientByName(
       updated_at: new Date().toISOString(),
     })
     .eq('user_id', user.id)
+    .eq('workspace', workspace)
     .eq('type', 'income')
     .ilike('description', `%${clean}%`)
     .select('id')
