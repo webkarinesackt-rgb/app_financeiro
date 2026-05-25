@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { CreditCard, CreditCardWithUsage } from '@/types'
 import { getClientWorkspace } from '@/lib/workspace'
 
-type CardInput = Omit<CreditCard, 'id' | 'user_id' | 'created_at' | 'updated_at'>
+type CardInput = Omit<CreditCard, 'id' | 'user_id' | 'workspace' | 'created_at' | 'updated_at'>
 
 export async function getCreditCards(): Promise<CreditCard[]> {
   const supabase = createClient()

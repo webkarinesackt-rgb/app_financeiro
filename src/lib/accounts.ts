@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { Account, AccountWithBalance } from '@/types'
 import { getClientWorkspace } from '@/lib/workspace'
 
-type AccountInput = Omit<Account, 'id' | 'user_id' | 'created_at' | 'updated_at'>
+type AccountInput = Omit<Account, 'id' | 'user_id' | 'workspace' | 'created_at' | 'updated_at'>
 
 export async function getAccounts(): Promise<Account[]> {
   const supabase = createClient()
