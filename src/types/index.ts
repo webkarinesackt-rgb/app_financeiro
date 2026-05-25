@@ -4,6 +4,15 @@ export type TransactionType = 'income' | 'expense'
 export type RecurrenceInterval = 'daily' | 'weekly' | 'monthly' | 'yearly'
 export type PaymentMethod = 'pix' | 'debit' | 'credit' | 'cash' | 'transfer' | 'boleto' | 'other'
 
+// ─── Workspace Types ─────────────────────────────────────────────────────────
+
+export type WorkspaceType = 'business' | 'personal'
+
+export const WORKSPACE_LABELS: Record<WorkspaceType, string> = {
+  business: 'Fysi',
+  personal: 'Pessoal',
+}
+
 export type Category =
   | 'salary' | 'freelance' | 'project' | 'consulting' | 'commission'
   | 'bonus' | 'rental' | 'digital_products' | 'investment' | 'gift' | 'refund'
@@ -14,6 +23,7 @@ export type Category =
 export interface Transaction {
   id: string
   user_id: string
+  workspace: WorkspaceType
   type: TransactionType
   amount: number
   description: string
@@ -60,6 +70,7 @@ export type AccountKind = 'operational' | 'reserve'
 export interface Account {
   id: string
   user_id: string
+  workspace: WorkspaceType
   name: string
   type: AccountType
   kind: AccountKind
@@ -76,6 +87,7 @@ export interface Account {
 export interface CreditCard {
   id: string
   user_id: string
+  workspace: WorkspaceType
   name: string
   bank: string | null
   color: string
