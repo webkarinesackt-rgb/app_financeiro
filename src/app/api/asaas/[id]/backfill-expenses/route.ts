@@ -79,6 +79,7 @@ export async function POST(
     const m = mapTransferToExpense(t)
     batch.push({
       user_id: integration.user_id,
+      workspace: 'business',
       type: m.type,
       amount: m.amount,
       description: m.description,

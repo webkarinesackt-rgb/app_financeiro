@@ -117,6 +117,7 @@ export async function POST(
 
       batch.push({
         user_id: integration.user_id,
+        workspace: 'business',
         type: 'income',
         amount: netValue,
         description: fullDesc,
