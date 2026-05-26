@@ -10,5 +10,6 @@ export async function setWorkspaceAction(value: WorkspaceType): Promise<void> {
     path: '/',
     maxAge: 60 * 60 * 24 * 365,
     sameSite: 'lax',
+    httpOnly: false,
   })
 }
