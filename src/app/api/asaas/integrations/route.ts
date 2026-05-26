@@ -52,6 +52,7 @@ export async function POST(request: NextRequest) {
       .from('accounts')
       .insert({
         user_id: user.id,
+        workspace: 'business',
         name,
         type: 'checking',
         bank: 'asaas',
