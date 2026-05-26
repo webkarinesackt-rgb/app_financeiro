@@ -56,7 +56,6 @@ export async function POST(request: NextRequest) {
         type: 'checking',
         bank: 'asaas',
         color: '#06b6d4',
-        workspace: 'business',
       })
       .select('id')
       .single()
