@@ -5,7 +5,7 @@ import type {
 import { FREQUENCY_TO_MONTHLY } from '@/types'
 import { getClientWorkspace } from '@/lib/workspace'
 
-const ROW = 'id, user_id, name, amount, frequency, category, notes, active, created_at, updated_at'
+const ROW = 'id, user_id, workspace, name, amount, frequency, category, notes, active, created_at, updated_at'
 
 export async function getFixedCosts(): Promise<FixedCost[]> {
   const supabase = createClient()

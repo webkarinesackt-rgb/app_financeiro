@@ -263,6 +263,7 @@ export type FixedCostCategory = 'team' | 'tools' | 'infra' | 'marketing' | 'taxe
 export interface FixedCost {
   id: string
   user_id: string
+  workspace: WorkspaceType
   name: string
   amount: number
   frequency: FixedCostFrequency
