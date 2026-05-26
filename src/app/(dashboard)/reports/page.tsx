@@ -326,6 +326,9 @@ function ReportsContent() {
                                   style={{ width: `${item.percentage}%`, backgroundColor: item.color }}
                                 />
                               </div>
+                              {!comparing && (
+                                <p className="text-[11px] text-slate-400 mt-0.5">{item.percentage.toFixed(1)}%</p>
+                              )}
                             </div>
                             <div className="text-right shrink-0 min-w-[5rem]">
                               <p className="text-sm font-semibold text-slate-700">{formatCurrency(item.amount)}</p>
@@ -472,6 +475,9 @@ function ReportsContent() {
                                 style={{ width: `${item.percentage}%`, backgroundColor: item.color }}
                               />
                             </div>
+                            {!comparing && (
+                              <p className="text-[11px] text-slate-400 mt-0.5">{item.percentage.toFixed(1)}%</p>
+                            )}
                           </div>
                           <div className="text-right shrink-0 min-w-[5rem]">
                             <p className="text-sm font-semibold text-slate-700">{formatCurrency(item.amount)}</p>
