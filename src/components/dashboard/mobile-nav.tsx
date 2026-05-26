@@ -29,9 +29,10 @@ export function MobileNav() {
   const workspace = useWorkspace()
   const [showForm, setShowForm] = useState(false)
 
-  // Filter visible items and always show exactly 4 (2+2) for layout symmetry,
-  // filling with fallback items if needed. For now keep up to 4.
+  // Filter visible items. Split dynamically around the center FAB so both sides
+  // are balanced regardless of how many items each workspace shows (2 or 4).
   const visibleNav = navItems.filter((i) => i.workspaces.includes(workspace)).slice(0, 4)
+  const mid = Math.ceil(visibleNav.length / 2)
 
   async function handleLogout() {
     const supabase = createClient()
@@ -67,8 +68,8 @@ export function MobileNav() {
       >
         <div className="mx-3 mb-2 rounded-2xl bg-stone-900/95 backdrop-blur-xl shadow-2xl shadow-stone-900/30 border border-white/5">
           <div className="flex items-center h-16 px-1">
-            {/* First 2 items */}
-            {visibleNav.slice(0, 2).map((item) => (
+            {/* First half of items */}
+            {visibleNav.slice(0, mid).map((item) => (
               <NavItem key={item.href} item={item} pathname={pathname} />
             ))}
 
@@ -82,8 +83,8 @@ export function MobileNav() {
               </button>
             </div>
 
-            {/* Last 2 items */}
-            {visibleNav.slice(2).map((item) => (
+            {/* Second half of items */}
+            {visibleNav.slice(mid).map((item) => (
               <NavItem key={item.href} item={item} pathname={pathname} />
             ))}
           </div>
