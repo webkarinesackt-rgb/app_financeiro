@@ -362,6 +362,29 @@ export async function categorizeTransactions(
   }
 }
 
+// Salva uma categoria built-in do workspace pessoal (ex: 'groceries') diretamente
+// no campo `category`, limpando `custom_category`. Evita que slugs de PersonalCategory
+// sejam armazenados como custom_category e depois exibidos como texto cru.
+export async function categorizeTransactionsToBuiltIn(
+  ids: string[],
+  categorySlug: string,
+): Promise<void> {
+  if (ids.length === 0) return
+  const supabase = createClient()
+  for (const batch of chunk(ids, 100)) {
+    const { error } = await supabase
+      .from('transactions')
+      .update({
+        category: categorySlug,
+        custom_category: null,
+        subcategory: null,
+        updated_at: new Date().toISOString(),
+      })
+      .in('id', batch)
+    if (error) throw error
+  }
+}
+
 // Para uma lista de descrições de despesa, devolve um mapa
 // descrição -> categoria inferida, com base em despesas já categorizadas
 // do mesmo lojista. Faz uma única consulta ao banco.

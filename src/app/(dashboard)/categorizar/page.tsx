@@ -9,9 +9,10 @@ import {
   getUncategorizedLPClients, getUncategorizedExpenses,
   type UncategorizedClient, type ExpenseOrigin,
 } from '@/lib/bulk-categorize'
-import { categorizeTransactions } from '@/lib/transactions'
+import { categorizeTransactions, categorizeTransactionsToBuiltIn } from '@/lib/transactions'
 import { formatCurrency } from '@/lib/format'
 import { useWorkspace } from '@/hooks/use-workspace'
+import { PERSONAL_INCOME_CATEGORIES, PERSONAL_EXPENSE_CATEGORIES } from '@/types'
 
 type Mode = 'income' | 'expense'
 
@@ -124,16 +125,24 @@ export default function CategorizarPage() {
     setProcessing(true)
     try {
       const updated = current.ids.length
-      await categorizeTransactions(current.ids, action.customCategory, action.subcategory)
+      const slug = action.customCategory
+      const isBuiltIn =
+        (PERSONAL_INCOME_CATEGORIES as string[]).includes(slug) ||
+        (PERSONAL_EXPENSE_CATEGORIES as string[]).includes(slug)
+      if (isPersonal && isBuiltIn) {
+        await categorizeTransactionsToBuiltIn(current.ids, slug)
+      } else {
+        await categorizeTransactions(current.ids, slug, action.subcategory)
+      }
       toast.success(`${current.name}: ${updated} transação(ões) → ${action.label}`)
-      setHistory((h) => [...h, { client: current, customCategory: action.customCategory, subcategory: action.subcategory, updatedCount: updated }])
+      setHistory((h) => [...h, { client: current, customCategory: slug, subcategory: action.subcategory, updatedCount: updated }])
       setIndex((i) => i + 1)
     } catch {
       toast.error('Erro ao categorizar')
     } finally {
       setProcessing(false)
     }
-  }, [current, processing])
+  }, [current, processing, isPersonal])
 
   const skip = useCallback(() => {
     if (!current || processing) return
