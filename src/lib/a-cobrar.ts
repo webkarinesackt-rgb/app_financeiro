@@ -3,6 +3,7 @@
 
 import { createClient } from '@/lib/supabase/client'
 import type { RecurringClient, Closing, Transaction } from '@/types'
+import { getClientWorkspace } from '@/lib/workspace'
 
 export interface PendingRecurring {
   client: RecurringClient
@@ -69,6 +70,7 @@ function daysBetween(iso: string): number {
 
 export async function getACobrarData(): Promise<ACobrarData> {
   const supabase = createClient()
+  const workspace = getClientWorkspace()
 
   // Janela: pagamentos dos últimos 60 dias (cobre recorrentes mensais + alguns recentes)
   const cutoff = new Date()
@@ -83,6 +85,7 @@ export async function getACobrarData(): Promise<ACobrarData> {
     supabase.from('recurring_clients').select('*').eq('active', true),
     supabase.from('projects').select('*').not('status', 'in', '(cancelled,paid)'),
     supabase.from('transactions').select('id, description, amount, date, type')
+      .eq('workspace', workspace)
       .eq('type', 'income')
       .gte('date', cutoffStr),
   ])
