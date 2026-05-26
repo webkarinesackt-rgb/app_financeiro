@@ -280,10 +280,13 @@ export async function createTransaction(
 
 export async function updateTransaction(id: string, data: Partial<TransactionFormData>): Promise<Transaction> {
   const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Não autenticado')
   const { data: transaction, error } = await supabase
     .from('transactions')
     .update({ ...data, updated_at: new Date().toISOString() })
     .eq('id', id)
+    .eq('user_id', user.id)
     .select()
     .single()
   if (error) throw error
