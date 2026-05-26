@@ -330,9 +330,11 @@ export async function deleteTransactions(ids: string[]): Promise<void> {
 // garante que só mexe nas transações dele. Não altera a subcategoria.
 export async function mergeCustomCategory(from: string, to: string): Promise<number> {
   const supabase = createClient()
+  const workspace = getClientWorkspace()
   const { data, error } = await supabase
     .from('transactions')
     .update({ category: 'custom', custom_category: to, updated_at: new Date().toISOString() })
+    .eq('workspace', workspace)
     .eq('custom_category', from)
     .select('id')
   if (error) throw error
