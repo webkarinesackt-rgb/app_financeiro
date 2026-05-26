@@ -20,8 +20,8 @@ describe('presetToRange', () => {
     expect(presetToRange('last_6_months', NOW)).toEqual({ from: '2025-12', to: '2026-05' })
   })
 
-  it('this_year returns Jan..Dec 2026', () => {
-    expect(presetToRange('this_year', NOW)).toEqual({ from: '2026-01', to: '2026-12' })
+  it('this_year returns Jan..May 2026', () => {
+    expect(presetToRange('this_year', NOW)).toEqual({ from: '2026-01', to: '2026-05' })
   })
 
   it('last_year returns Jan..Dec 2025', () => {

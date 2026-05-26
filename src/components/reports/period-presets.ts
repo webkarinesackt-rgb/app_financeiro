@@ -32,7 +32,7 @@ export function presetToRange(preset: PeriodPreset, now: Date = new Date()): { f
     case 'last_3_months': { const s = shift(2); return { from: fmt(s.y, s.m), to: fmt(y, m) } }
     case 'last_6_months': { const s = shift(5); return { from: fmt(s.y, s.m), to: fmt(y, m) } }
     case 'last_12_months':{ const s = shift(11); return { from: fmt(s.y, s.m), to: fmt(y, m) } }
-    case 'this_year':     return { from: fmt(y, 1),    to: fmt(y, 12) }
+    case 'this_year':     return { from: fmt(y, 1),    to: fmt(y, m) }
     case 'last_year':     return { from: fmt(y - 1, 1), to: fmt(y - 1, 12) }
     case 'custom':        return { from: fmt(y, m), to: fmt(y, m) }
   }
