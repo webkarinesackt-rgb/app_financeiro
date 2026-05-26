@@ -520,7 +520,10 @@ export function getCategoryColorByWorkspace(
   customCategory?: string | null,
 ): string {
   if (category === 'custom' && customCategory) {
-    return (workspace === 'personal' ? PERSONAL_CATEGORY_COLORS.custom : CATEGORY_COLORS.custom)
+    if (workspace === 'business') {
+      return CUSTOM_EXPENSE_COLORS[customCategory] ?? CATEGORY_COLORS.custom
+    }
+    return PERSONAL_CATEGORY_COLORS.custom
   }
   if (workspace === 'personal') {
     return PERSONAL_CATEGORY_COLORS[category as PersonalCategory] ?? '#94a3b8'
