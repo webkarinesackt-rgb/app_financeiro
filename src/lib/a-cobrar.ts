@@ -3,7 +3,7 @@
 
 import { createClient } from '@/lib/supabase/client'
 import type { RecurringClient, Closing, Transaction } from '@/types'
-import { getClientWorkspace } from '@/lib/workspace'
+import { getClientWorkspace, filterByWorkspace } from '@/lib/workspace'
 
 export interface PendingRecurring {
   client: RecurringClient
@@ -84,13 +84,12 @@ export async function getACobrarData(): Promise<ACobrarData> {
   ] = await Promise.all([
     supabase.from('recurring_clients').select('*').eq('active', true),
     supabase.from('projects').select('*').not('status', 'in', '(cancelled,paid)'),
-    supabase.from('transactions').select('id, description, amount, date, type')
-      .eq('workspace', workspace)
+    supabase.from('transactions').select('id, description, amount, date, type, workspace')
       .eq('type', 'income')
       .gte('date', cutoffStr),
   ])
 
-  const txs = (transactions ?? []) as Transaction[]
+  const txs = filterByWorkspace(transactions, workspace) as unknown as Transaction[]
   const clientList = (clients ?? []) as RecurringClient[]
   const projectList = (projects ?? []) as Closing[]
 

@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { extractExpenseKey } from '@/lib/expense-key'
-import { getClientWorkspace } from '@/lib/workspace'
+import { getClientWorkspace, filterByWorkspace } from '@/lib/workspace'
 
 export interface UncategorizedClient {
   name: string             // nome extraído da description
@@ -38,8 +38,7 @@ export async function getUncategorizedExpenses(
   const workspace = getClientWorkspace()
   let query = supabase
     .from('transactions')
-    .select('id, description, amount, date, credit_card_id, integration_id')
-    .eq('workspace', workspace)
+    .select('id, description, amount, date, credit_card_id, integration_id, workspace')
     .eq('type', 'expense')
     .is('custom_category', null)
 
@@ -50,9 +49,10 @@ export async function getUncategorizedExpenses(
 
   const { data, error } = await query
   if (error || !data) return []
+  const filtered = filterByWorkspace(data, workspace)
 
   const map = new Map<string, UncategorizedClient>()
-  for (const t of data) {
+  for (const t of filtered) {
     const key = extractExpenseKey(t.description as string)
     if (!key) continue
 
@@ -84,8 +84,7 @@ export async function getUncategorizedLPClients(fromDate?: string): Promise<Unca
   const workspace = getClientWorkspace()
   let query = supabase
     .from('transactions')
-    .select('id, description, amount, date')
-    .eq('workspace', workspace)
+    .select('id, description, amount, date, workspace')
     .eq('custom_category', 'Receita Landing Page / Site')
     .eq('type', 'income')
     .is('subcategory', null)
@@ -95,9 +94,10 @@ export async function getUncategorizedLPClients(fromDate?: string): Promise<Unca
   const { data, error } = await query
 
   if (error || !data) return []
+  const filtered = filterByWorkspace(data, workspace)
 
   const map = new Map<string, UncategorizedClient>()
-  for (const t of data) {
+  for (const t of filtered) {
     const name = extractClient(t.description)
     if (!name) continue
     const cur = map.get(name) ?? {
@@ -135,21 +135,26 @@ export async function categorizeExpenseByPattern(
   const clean = pattern.replace(/[%_]/g, '').trim()
   if (clean.length < 3) return 0
 
-  const { data, error } = await supabase
+  // Two-step (resilient to PostgREST schema cache lag): SELECT IDs, filter
+  // workspace client-side, then UPDATE by ID list.
+  const { data: candidatesRaw } = await supabase
+    .from('transactions')
+    .select('id, workspace')
+    .eq('user_id', user.id)
+    .eq('type', 'expense')
+    .ilike('description', `%${clean}%`)
+  const ids = filterByWorkspace(candidatesRaw, workspace).map((c) => c.id as string)
+  if (ids.length === 0) return 0
+  const { error } = await supabase
     .from('transactions')
     .update({
       category: customCategory ? 'custom' : category,
       custom_category: customCategory,
       updated_at: new Date().toISOString(),
     })
-    .eq('user_id', user.id)
-    .eq('workspace', workspace)
-    .eq('type', 'expense')
-    .ilike('description', `%${clean}%`)
-    .select('id')
-
+    .in('id', ids)
   if (error) return 0
-  return data?.length ?? 0
+  return ids.length
 }
 
 // Aplica uma categorização a TODAS as transações que tenham o nome do
@@ -167,9 +172,16 @@ export async function categorizeClientByName(
   const clean = clientName.replace(/[%_]/g, '').trim()
   if (clean.length < 3) return 0
 
-  // Build .or() filter that matches exact "clean" string in description
-  // (escape % already done above)
-  const { data, error } = await supabase
+  // Two-step: SELECT + client-side workspace filter, then UPDATE by ID.
+  const { data: candidatesRaw } = await supabase
+    .from('transactions')
+    .select('id, workspace')
+    .eq('user_id', user.id)
+    .eq('type', 'income')
+    .ilike('description', `%${clean}%`)
+  const ids = filterByWorkspace(candidatesRaw, workspace).map((c) => c.id as string)
+  if (ids.length === 0) return 0
+  const { error } = await supabase
     .from('transactions')
     .update({
       category: 'custom',
@@ -177,12 +189,7 @@ export async function categorizeClientByName(
       subcategory,
       updated_at: new Date().toISOString(),
     })
-    .eq('user_id', user.id)
-    .eq('workspace', workspace)
-    .eq('type', 'income')
-    .ilike('description', `%${clean}%`)
-    .select('id')
-
+    .in('id', ids)
   if (error) return 0
-  return data?.length ?? 0
+  return ids.length
 }

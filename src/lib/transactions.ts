@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { Transaction, TransactionFormData, WorkspaceType } from '@/types'
 import { CATEGORY_LABELS } from '@/types'
 import { buildMerchantCategoryMap, matchMerchantCategory, type CategoryMatch } from '@/lib/expense-key'
-import { getClientWorkspace } from '@/lib/workspace'
+import { getClientWorkspace, filterByWorkspace } from '@/lib/workspace'
 
 // ─── Date range helpers ───────────────────────────────────────────────────────
 
@@ -43,16 +43,16 @@ export async function applyCategoryToSimilarTransactions(
   if (!user) return 0
   const workspace = getClientWorkspace()
 
-  const { data: similar } = await supabase
+  const { data: similarRaw } = await supabase
     .from('transactions')
-    .select('id, custom_category, subcategory, category')
-    .eq('workspace', workspace)
+    .select('id, custom_category, subcategory, category, workspace')
     .eq('type', type)
     .eq('user_id', user.id)
     .neq('id', sourceId)
     .ilike('description', `%${clean}%`)
 
-  if (!similar || similar.length === 0) return 0
+  const similar = filterByWorkspace(similarRaw, workspace)
+  if (similar.length === 0) return 0
 
   const toUpdate = similar.filter((t) =>
     t.custom_category !== customCategory || t.subcategory !== subcategory
@@ -96,17 +96,17 @@ export async function findCategoryByDescriptionPattern(
   for (const raw of patterns) {
     const clean = raw.replace(/[%_]/g, '').trim()
     if (clean.length < 4) continue
-    const { data } = await supabase
+    const { data: rawData } = await supabase
       .from('transactions')
-      .select('custom_category, subcategory')
-      .eq('workspace', workspace)
+      .select('custom_category, subcategory, workspace')
       .eq('type', type)
       .eq('category', 'custom')
       .not('custom_category', 'is', null)
       .ilike('description', `%${clean}%`)
       .order('date', { ascending: false })
-      .limit(1)
-    if (data && data.length > 0 && data[0].custom_category) {
+      .limit(20)
+    const data = filterByWorkspace(rawData, workspace)
+    if (data.length > 0 && data[0].custom_category) {
       return {
         custom_category: data[0].custom_category,
         subcategory: data[0].subcategory ?? null,
@@ -122,12 +122,13 @@ export async function findCategoryByDescriptionPattern(
 export async function getUsedBuiltInCategories(type?: 'income' | 'expense'): Promise<string[]> {
   const supabase = createClient()
   const workspace = getClientWorkspace()
-  let query = supabase.from('transactions').select('category').eq('workspace', workspace).neq('category', 'custom')
+  let query = supabase.from('transactions').select('category, workspace').neq('category', 'custom')
   if (type) query = query.eq('type', type)
   const { data, error } = await query
   if (error || !data) return []
+  const filtered = filterByWorkspace(data, workspace)
   const set = new Set<string>()
-  for (const r of data) {
+  for (const r of filtered) {
     const c = (r as { category: string | null }).category
     if (c && c !== 'custom') set.add(c)
   }
@@ -141,8 +142,7 @@ export async function getCustomCategories(type?: 'income' | 'expense'): Promise<
   const workspace = getClientWorkspace()
   let query = supabase
     .from('transactions')
-    .select('custom_category, type')
-    .eq('workspace', workspace)
+    .select('custom_category, type, workspace')
     .eq('category', 'custom')
     .not('custom_category', 'is', null)
 
@@ -150,7 +150,8 @@ export async function getCustomCategories(type?: 'income' | 'expense'): Promise<
 
   const { data, error } = await query
   if (error) return []
-  const names = (data ?? [])
+  const filtered = filterByWorkspace(data, workspace)
+  const names = filtered
     .map((r) => (r as { custom_category: string | null }).custom_category)
     .filter((n): n is string => !!n && n.trim().length > 0)
   return Array.from(new Set(names)).sort((a, b) => a.localeCompare(b, 'pt-BR'))
@@ -170,7 +171,7 @@ export async function getTransactions(filters?: {
 }): Promise<Transaction[]> {
   const supabase = createClient()
   const workspace = filters?.workspace ?? getClientWorkspace()
-  let query = supabase.from('transactions').select('*').eq('workspace', workspace).order('date', { ascending: false })
+  let query = supabase.from('transactions').select('*').order('date', { ascending: false })
 
   if (filters?.from && filters?.to) {
     const { start, end } = computeDateRange(filters.from, filters.to)
@@ -202,7 +203,7 @@ export async function getTransactions(filters?: {
 
   const { data, error } = await query
   if (error) throw error
-  return data ?? []
+  return filterByWorkspace(data, workspace)
 }
 
 export async function createTransaction(
@@ -334,14 +335,23 @@ export async function deleteTransactions(ids: string[]): Promise<void> {
 export async function mergeCustomCategory(from: string, to: string): Promise<number> {
   const supabase = createClient()
   const workspace = getClientWorkspace()
-  const { data, error } = await supabase
+  // Two-step (resilient to PostgREST schema cache lag on workspace column):
+  // 1) SELECT candidate rows including workspace, filter client-side
+  // 2) UPDATE BY ID
+  const { data: candidatesRaw, error: selErr } = await supabase
+    .from('transactions')
+    .select('id, workspace')
+    .eq('custom_category', from)
+  if (selErr) throw selErr
+  const candidates = filterByWorkspace(candidatesRaw, workspace)
+  const ids = candidates.map((c) => c.id as string)
+  if (ids.length === 0) return 0
+  const { error } = await supabase
     .from('transactions')
     .update({ category: 'custom', custom_category: to, updated_at: new Date().toISOString() })
-    .eq('workspace', workspace)
-    .eq('custom_category', from)
-    .select('id')
+    .in('id', ids)
   if (error) throw error
-  return data?.length ?? 0
+  return ids.length
 }
 
 // Aplica uma custom_category (e subcategoria opcional) a várias transações
@@ -401,17 +411,20 @@ export async function inferCategoriesFromHistory(
 
   const supabase = createClient()
   const workspace = getClientWorkspace()
-  const { data } = await supabase
+  const { data: rawData } = await supabase
     .from('transactions')
-    .select('description, custom_category, subcategory')
-    .eq('workspace', workspace)
+    .select('description, custom_category, subcategory, workspace')
     .eq('type', 'expense')
     .eq('category', 'custom')
     .not('custom_category', 'is', null)
 
-  const samples = (data ?? [])
-    .filter((r): r is { description: string; custom_category: string; subcategory: string | null } =>
-      typeof r.description === 'string' && typeof r.custom_category === 'string')
+  const samples = filterByWorkspace(rawData, workspace)
+    .filter((r) => typeof r.description === 'string' && typeof r.custom_category === 'string')
+    .map((r) => ({
+      description: r.description as string,
+      custom_category: r.custom_category as string,
+      subcategory: (r.subcategory ?? null) as string | null,
+    }))
 
   const merchantMap = buildMerchantCategoryMap(samples)
   for (const desc of descriptions) {

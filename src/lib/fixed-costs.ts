@@ -3,7 +3,7 @@ import type {
   FixedCost, FixedCostFormData, FixedCostFrequency, FixedCostCategory,
 } from '@/types'
 import { FREQUENCY_TO_MONTHLY } from '@/types'
-import { getClientWorkspace } from '@/lib/workspace'
+import { getClientWorkspace, filterByWorkspace } from '@/lib/workspace'
 
 const ROW = 'id, user_id, workspace, name, amount, frequency, category, notes, active, created_at, updated_at'
 
@@ -13,10 +13,9 @@ export async function getFixedCosts(): Promise<FixedCost[]> {
   const { data, error } = await supabase
     .from('fixed_costs')
     .select(ROW)
-    .eq('workspace', workspace)
     .order('amount', { ascending: false })
   if (error) throw error
-  return (data ?? []) as FixedCost[]
+  return filterByWorkspace(data as Record<string, unknown>[], workspace) as unknown as FixedCost[]
 }
 
 export async function createFixedCost(data: FixedCostFormData): Promise<FixedCost> {

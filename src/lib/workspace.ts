@@ -29,3 +29,16 @@ export function getClientWorkspace(): WorkspaceType {
   const match = document.cookie.match(/(?:^|;\s*)workspace=([^;]+)/)
   return parseWorkspace(match?.[1])
 }
+
+// Client-side workspace filter. Use INSTEAD of `.eq('workspace', workspace)` on
+// SELECTs because PostgREST's schema cache can lag behind DDL changes (PGRST204
+// "could not find workspace column"). Filtering server-side fails silently with
+// empty results; filtering client-side is resilient to that lag. Rows without
+// a workspace value are treated as 'business' (legacy data, default in DB).
+export function filterByWorkspace<T extends Record<string, unknown>>(
+  rows: T[] | null | undefined,
+  workspace: WorkspaceType,
+): T[] {
+  if (!rows) return []
+  return rows.filter((r) => ((r.workspace as string | undefined) ?? 'business') === workspace)
+}

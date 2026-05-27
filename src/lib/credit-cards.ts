@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import type { CreditCard, CreditCardWithUsage } from '@/types'
-import { getClientWorkspace } from '@/lib/workspace'
+import { getClientWorkspace, filterByWorkspace } from '@/lib/workspace'
 
 type CardInput = Omit<CreditCard, 'id' | 'user_id' | 'workspace' | 'created_at' | 'updated_at'>
 
@@ -10,10 +10,9 @@ export async function getCreditCards(): Promise<CreditCard[]> {
   const { data, error } = await supabase
     .from('credit_cards')
     .select('*')
-    .eq('workspace', workspace)
     .order('created_at', { ascending: true })
   if (error) throw error
-  return data ?? []
+  return filterByWorkspace(data, workspace)
 }
 
 export async function getCreditCardsWithUsage(month: number, year: number): Promise<CreditCardWithUsage[]> {
@@ -22,20 +21,22 @@ export async function getCreditCardsWithUsage(month: number, year: number): Prom
   const start = new Date(year, month - 1, 1).toISOString().split('T')[0]
   const end = new Date(year, month, 0).toISOString().split('T')[0]
 
-  const [{ data: cards }, { data: transactions }] = await Promise.all([
-    supabase.from('credit_cards').select('*').eq('workspace', workspace).order('created_at', { ascending: true }),
+  const [{ data: cardsRaw }, { data: transactionsRaw }] = await Promise.all([
+    supabase.from('credit_cards').select('*').order('created_at', { ascending: true }),
     supabase
       .from('transactions')
-      .select('credit_card_id, amount')
-      .eq('workspace', workspace)
+      .select('credit_card_id, amount, workspace')
       .eq('type', 'expense')
       .not('credit_card_id', 'is', null)
       .gte('date', start)
       .lte('date', end),
   ])
 
-  return (cards ?? []).map((card) => {
-    const invoice = (transactions ?? [])
+  const cards = filterByWorkspace(cardsRaw, workspace)
+  const transactions = filterByWorkspace(transactionsRaw, workspace)
+
+  return cards.map((card) => {
+    const invoice = transactions
       .filter((t) => t.credit_card_id === card.id)
       .reduce((s, t) => s + t.amount, 0)
     return { ...card, currentInvoice: invoice }

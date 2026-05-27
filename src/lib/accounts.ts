@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import type { Account, AccountWithBalance } from '@/types'
-import { getClientWorkspace } from '@/lib/workspace'
+import { getClientWorkspace, filterByWorkspace } from '@/lib/workspace'
 
 type AccountInput = Omit<Account, 'id' | 'user_id' | 'workspace' | 'created_at' | 'updated_at'>
 
@@ -10,23 +10,25 @@ export async function getAccounts(): Promise<Account[]> {
   const { data, error } = await supabase
     .from('accounts')
     .select('*')
-    .eq('workspace', workspace)
     .order('created_at', { ascending: true })
   if (error) throw error
-  return data ?? []
+  return filterByWorkspace(data, workspace)
 }
 
 export async function getAccountsWithBalances(): Promise<AccountWithBalance[]> {
   const supabase = createClient()
   const workspace = getClientWorkspace()
 
-  const [{ data: accounts }, { data: transactions }] = await Promise.all([
-    supabase.from('accounts').select('*').eq('workspace', workspace).order('created_at', { ascending: true }),
-    supabase.from('transactions').select('account_id, type, amount').eq('workspace', workspace).not('account_id', 'is', null),
+  const [{ data: accountsRaw }, { data: transactionsRaw }] = await Promise.all([
+    supabase.from('accounts').select('*').order('created_at', { ascending: true }),
+    supabase.from('transactions').select('account_id, type, amount, workspace').not('account_id', 'is', null),
   ])
 
-  return (accounts ?? []).map((account) => {
-    const txs = (transactions ?? []).filter((t) => t.account_id === account.id)
+  const accounts = filterByWorkspace(accountsRaw, workspace)
+  const transactions = filterByWorkspace(transactionsRaw, workspace)
+
+  return accounts.map((account) => {
+    const txs = transactions.filter((t) => t.account_id === account.id)
     const income = txs.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0)
     const expense = txs.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
     return { ...account, currentBalance: account.initial_balance + income - expense }

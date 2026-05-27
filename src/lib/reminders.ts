@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
-import { getClientWorkspace } from '@/lib/workspace'
+import { getClientWorkspace, filterByWorkspace } from '@/lib/workspace'
 
 export type ReminderType = 'payment_due' | 'invoice_pending'
 
@@ -23,11 +23,11 @@ export type ReminderInput = Pick<Reminder, 'type' | 'title'> &
 export async function listReminders(type: ReminderType, opts: { completed?: boolean } = {}): Promise<Reminder[]> {
   const supabase = createClient()
   const workspace = getClientWorkspace()
-  let q = supabase.from('reminders').select('*').eq('workspace', workspace).eq('type', type)
+  let q = supabase.from('reminders').select('*').eq('type', type)
   if (typeof opts.completed === 'boolean') q = q.eq('completed', opts.completed)
   const { data, error } = await q.order('due_date', { ascending: true, nullsFirst: false })
   if (error) throw error
-  return data ?? []
+  return filterByWorkspace(data, workspace) as Reminder[]
 }
 
 export async function createReminder(input: ReminderInput): Promise<Reminder> {
