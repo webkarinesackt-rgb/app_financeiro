@@ -10,6 +10,9 @@
   --color-canvas: var(--canvas);
   --color-brand: var(--brand);
   --color-brand-soft: var(--brand-soft);
+  --color-brand-deep: var(--brand-deep);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
   --color-accent-gold: var(--accent-gold);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
@@ -54,17 +57,21 @@
 }
 
 :root {
-  /* Background warm (substitui slate-50) — paper feel */
-  --canvas: oklch(0.985 0.005 80);
-  /* Brand: deep refined emerald + warm gold accent */
-  --brand: oklch(0.48 0.13 165);
+  /* ─── Paleta editorial: papel + tinta + esmeralda + dourado ───────── */
+  /* Canvas: papel cremoso, levemente quente */
+  --canvas: oklch(0.985 0.008 85);
+  /* Brand: emerald refinado em dois tons + ink profundo (como o hero do Fysi Lab) */
+  --brand: oklch(0.50 0.13 165);
+  --brand-deep: oklch(0.28 0.07 165);
   --brand-soft: oklch(0.94 0.04 165);
+  --ink: oklch(0.18 0.03 165);
+  --ink-soft: oklch(0.30 0.04 165);
   --accent-gold: oklch(0.78 0.10 75);
 
   --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --foreground: oklch(0.16 0.01 80);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.16 0.01 80);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
   --primary: oklch(0.205 0 0);
@@ -76,15 +83,15 @@
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
+  --border: oklch(0.91 0.005 80);
+  --input: oklch(0.91 0.005 80);
   --ring: oklch(0.708 0 0);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
+  --radius: 0.75rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -146,7 +153,7 @@
     font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   }
 
-  /* Fraunces — display serif pra números grandes, títulos e wordmark */
+  /* Fraunces — display serif pra títulos editoriais e wordmark */
   .font-display {
     font-family: var(--font-display), ui-serif, Georgia, serif;
     font-feature-settings: "ss01", "ss03", "ss04";
@@ -164,17 +171,49 @@
     font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
     font-feature-settings: "lnum", "tnum";
     font-variant-numeric: tabular-nums lining-nums;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.025em;
     font-weight: 600;
   }
 
   /* Eyebrow: pequeno, uppercase, tracking aberto, peso médio */
   .eyebrow {
     text-transform: uppercase;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.16em;
     font-size: 0.6875rem;
     font-weight: 600;
     color: oklch(0.42 0.01 75);
+  }
+
+  /* Eyebrow com bullet (pill style, igual ao "SOU CLIENTE FYSI" do Fysi Lab) */
+  .eyebrow-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.3125rem 0.75rem;
+    border-radius: 9999px;
+    background: oklch(0.18 0.03 165);
+    color: oklch(0.97 0.01 85);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 0.6875rem;
+    font-weight: 600;
+  }
+  .eyebrow-pill::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 9999px;
+    background: var(--accent-gold);
+    box-shadow: 0 0 0 3px oklch(0.78 0.10 75 / 0.25);
+  }
+
+  /* Título editorial — serif, peso 500, óptico ajustado pro tamanho */
+  .editorial-title {
+    font-family: var(--font-display), ui-serif, Georgia, serif;
+    font-feature-settings: "ss01", "ss03", "ss04";
+    font-weight: 500;
+    letter-spacing: -0.025em;
+    line-height: 1.05;
+    color: var(--ink);
   }
 
   /* Hairline divisor decorativo — usado em headers de seção */
@@ -183,8 +222,8 @@
     background: linear-gradient(
       to right,
       transparent,
-      oklch(0.85 0.005 75) 20%,
-      oklch(0.85 0.005 75) 80%,
+      oklch(0.85 0.005 75) 18%,
+      oklch(0.85 0.005 75) 82%,
       transparent
     );
   }
@@ -197,13 +236,92 @@
     letter-spacing: -0.02em;
   }
 
-  /* Canvas com sutil noise pra dar textura no fundo */
+  /* Canvas: papel cremoso + leve gradiente radial + grão sutil (SVG noise) */
   .bg-canvas {
-    background-color: oklch(0.985 0.005 80);
+    background-color: var(--canvas);
     background-image:
-      radial-gradient(at 0% 0%, oklch(0.96 0.02 165 / 0.4), transparent 50%),
-      radial-gradient(at 100% 100%, oklch(0.95 0.02 75 / 0.3), transparent 60%);
+      url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.14  0 0 0 0 0.13  0 0 0 0 0.11  0 0 0 0.035 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+      radial-gradient(at 0% 0%, oklch(0.96 0.025 165 / 0.45), transparent 55%),
+      radial-gradient(at 100% 100%, oklch(0.95 0.025 75 / 0.30), transparent 60%);
     background-attachment: fixed;
+    background-size: 220px 220px, auto, auto;
+  }
+
+  /* Card refinado: borda hairline + sombra layered + sutil destaque no topo */
+  .surface-card {
+    background: oklch(0.998 0.003 85);
+    border: 1px solid oklch(0.91 0.008 80);
+    border-radius: 1rem;
+    box-shadow:
+      0 1px 0 0 oklch(1 0 0) inset,
+      0 1px 2px -1px oklch(0.18 0.03 165 / 0.04),
+      0 8px 24px -12px oklch(0.18 0.03 165 / 0.06);
+    transition: box-shadow 220ms ease, transform 220ms ease;
+  }
+  .surface-card:hover {
+    box-shadow:
+      0 1px 0 0 oklch(1 0 0) inset,
+      0 1px 2px -1px oklch(0.18 0.03 165 / 0.06),
+      0 14px 32px -14px oklch(0.18 0.03 165 / 0.10);
+  }
+
+  /* Card destaque com filete dourado no topo (KPIs principais) */
+  .surface-card-accent {
+    position: relative;
+    background: oklch(0.998 0.003 85);
+    border: 1px solid oklch(0.91 0.008 80);
+    border-radius: 1rem;
+    box-shadow:
+      0 1px 0 0 oklch(1 0 0) inset,
+      0 8px 24px -12px oklch(0.18 0.03 165 / 0.06);
+    overflow: hidden;
+  }
+  .surface-card-accent::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(
+      to right,
+      transparent,
+      var(--accent-gold) 30%,
+      var(--accent-gold) 70%,
+      transparent
+    );
+    opacity: 0.7;
+  }
+
+  /* Sidebar refinado: fundo papel + filete dourado vertical na borda direita */
+  .sidebar-refined {
+    background:
+      linear-gradient(to bottom, oklch(0.99 0.005 85), oklch(0.97 0.008 80));
+    border-right: 1px solid oklch(0.90 0.008 80);
+    position: relative;
+  }
+  .sidebar-refined::after {
+    content: '';
+    position: absolute;
+    top: 18%;
+    right: -1px;
+    bottom: 18%;
+    width: 1px;
+    background: linear-gradient(
+      to bottom,
+      transparent,
+      var(--accent-gold) 30%,
+      var(--accent-gold) 70%,
+      transparent
+    );
+    opacity: 0.35;
+  }
+
+  /* Item ativo do sidebar — dark ink com filete dourado no canto */
+  .nav-item-active {
+    background: var(--ink);
+    color: oklch(0.985 0.008 85);
+    box-shadow:
+      0 1px 2px -1px oklch(0.18 0.03 165 / 0.20),
+      0 4px 12px -6px oklch(0.18 0.03 165 / 0.20);
   }
 }
 

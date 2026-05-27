@@ -53,7 +53,7 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="flex flex-col w-64 min-h-screen bg-white/80 backdrop-blur-sm border-r border-stone-200/60 px-3 py-6 gap-1 shrink-0">
+    <aside className="sidebar-refined flex flex-col w-64 min-h-screen px-3 py-6 gap-1 shrink-0">
       <div className="px-2 mb-4 flex flex-col gap-3">
         <Logo size="md" />
         <WorkspaceSwitcher />
@@ -69,8 +69,8 @@ export function Sidebar() {
               <span className={cn(
                 'group relative flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all',
                 active
-                  ? 'bg-stone-900 text-white shadow-sm shadow-stone-900/10'
-                  : 'text-stone-600 hover:bg-stone-100/80 hover:text-stone-900'
+                  ? 'nav-item-active'
+                  : 'text-stone-600 hover:bg-stone-200/40 hover:text-stone-900'
               )}>
                 <Icon className={cn('h-[15px] w-[15px] transition-colors', active ? 'text-[color:var(--accent-gold)]' : '')} />
                 {item.label}
@@ -87,8 +87,8 @@ export function Sidebar() {
           className={cn(
             'flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all w-full',
             pathname.startsWith('/settings')
-              ? 'bg-stone-900 text-white shadow-sm shadow-stone-900/10'
-              : 'text-stone-600 hover:bg-stone-100/80 hover:text-stone-900'
+              ? 'nav-item-active'
+              : 'text-stone-600 hover:bg-stone-200/40 hover:text-stone-900'
           )}
         >
           <Settings className={cn('h-[15px] w-[15px]', pathname.startsWith('/settings') ? 'text-[color:var(--accent-gold)]' : '')} />
