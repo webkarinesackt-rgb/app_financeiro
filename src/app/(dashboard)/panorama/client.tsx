@@ -56,30 +56,32 @@ export function PanoramaClient() {
 
   const fetchData = useCallback(async () => {
     setLoading(true)
+    // Promise.allSettled so a failure in one fetch (e.g., getFixedCosts hitting
+    // a stale PostgREST schema cache) doesn't blank the whole panorama.
     try {
       if (period === 'month') {
-        const [cur, prev, rc, fc] = await Promise.all([
+        const [cur, prev, rc, fc] = await Promise.allSettled([
           getTransactions({ month, year }),
           getTransactions({ month: prevMonth, year: prevYear }),
           getRecurringClients(),
           getFixedCosts(),
         ])
-        setCurrentTx(cur)
-        setPrevTx(prev)
-        setRecurringClients(rc)
-        setFixedCosts(fc)
+        if (cur.status === 'fulfilled') setCurrentTx(cur.value)
+        if (prev.status === 'fulfilled') setPrevTx(prev.value)
+        if (rc.status === 'fulfilled') setRecurringClients(rc.value)
+        if (fc.status === 'fulfilled') setFixedCosts(fc.value)
       } else {
         const ytdMonths = getYearToDateMonths(month)
-        const [curResults, prevResults, rc, fc] = await Promise.all([
+        const [curResults, prevResults, rc, fc] = await Promise.allSettled([
           Promise.all(ytdMonths.map((m) => getTransactions({ month: m, year }))),
           Promise.all(ytdMonths.map((m) => getTransactions({ month: m, year: year - 1 }))),
           getRecurringClients(),
           getFixedCosts(),
         ])
-        setCurrentTx(curResults.flat())
-        setPrevTx(prevResults.flat())
-        setRecurringClients(rc)
-        setFixedCosts(fc)
+        if (curResults.status === 'fulfilled') setCurrentTx(curResults.value.flat())
+        if (prevResults.status === 'fulfilled') setPrevTx(prevResults.value.flat())
+        if (rc.status === 'fulfilled') setRecurringClients(rc.value)
+        if (fc.status === 'fulfilled') setFixedCosts(fc.value)
       }
     } finally {
       setLoading(false)
