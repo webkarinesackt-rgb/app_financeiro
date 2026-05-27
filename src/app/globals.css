@@ -165,14 +165,14 @@
     letter-spacing: -0.01em;
   }
 
-  /* Display: grande, refinado, com tracking apertado — usado em KPIs.
-     Números em sans-serif (Geist) — sem serifa, a pedido. */
+  /* Display: grande, refinado — Fraunces serif para os números grandes,
+     com tabular numerals pra não dançar de width. Visual editorial. */
   .display-num {
-    font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-    font-feature-settings: "lnum", "tnum";
+    font-family: var(--font-display), ui-serif, Georgia, serif;
+    font-feature-settings: "lnum", "tnum", "ss01";
     font-variant-numeric: tabular-nums lining-nums;
-    letter-spacing: -0.025em;
-    font-weight: 600;
+    letter-spacing: -0.02em;
+    font-weight: 500;
   }
 
   /* Eyebrow: pequeno, uppercase, tracking aberto, peso médio */
