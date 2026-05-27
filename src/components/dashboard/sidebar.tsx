@@ -7,7 +7,6 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { LayoutDashboard, ArrowLeftRight, BarChart3, Settings, LogOut, ChevronDown, CalendarCheck, Handshake, PiggyBank, LineChart, AlertCircle, Sparkles, Activity, Upload } from 'lucide-react'
-import { Logo } from '@/components/brand/logo'
 import { WorkspaceSwitcher } from '@/components/workspace/workspace-switcher'
 import { useWorkspace } from '@/hooks/use-workspace'
 import type { WorkspaceType } from '@/types'
@@ -54,8 +53,7 @@ export function Sidebar() {
 
   return (
     <aside className="sidebar-refined flex flex-col w-64 min-h-screen px-3 py-6 gap-1 shrink-0">
-      <div className="px-2 mb-4 flex flex-col gap-3">
-        <Logo size="md" />
+      <div className="px-2 mb-5">
         <WorkspaceSwitcher />
       </div>
       <div className="hairline mb-4 mx-2" />

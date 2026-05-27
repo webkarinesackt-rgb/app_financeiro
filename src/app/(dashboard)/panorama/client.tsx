@@ -521,10 +521,11 @@ interface KPICardProps {
 }
 
 function KPICard({ label, value, delta, prevLabel, prevValue, color, icon, invertDelta }: KPICardProps) {
+  // Paleta Fysi: brand-soft + ink + variações refinadas
   const palette: Record<string, { bg: string; border: string; text: string; deltaUp: string; deltaDown: string }> = {
-    emerald: { bg: 'bg-emerald-50', border: 'border-emerald-100', text: 'text-emerald-700', deltaUp: 'text-emerald-700', deltaDown: 'text-red-700' },
-    red:     { bg: 'bg-red-50',     border: 'border-red-100',     text: 'text-red-700',     deltaUp: 'text-red-700',     deltaDown: 'text-emerald-700' },
-    blue:    { bg: 'bg-blue-50',    border: 'border-blue-100',    text: 'text-blue-700',    deltaUp: 'text-emerald-700', deltaDown: 'text-red-700' },
+    emerald: { bg: 'bg-[color:var(--brand-soft)]/60', border: 'border-[color:var(--brand)]/20', text: 'text-[color:var(--brand-deep)]', deltaUp: 'text-[color:var(--brand-deep)]', deltaDown: 'text-red-700' },
+    red:     { bg: 'bg-red-50/60',                    border: 'border-red-200/50',              text: 'text-red-800',                   deltaUp: 'text-red-700',                deltaDown: 'text-[color:var(--brand-deep)]' },
+    blue:    { bg: 'bg-stone-50',                     border: 'border-stone-200/60',            text: 'text-[color:var(--ink)]',        deltaUp: 'text-[color:var(--brand-deep)]', deltaDown: 'text-red-700' },
   }
   const p = palette[color]
   const positiveDelta = invertDelta ? delta < 0 : delta > 0
