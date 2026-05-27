@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       .from('accounts')
       .insert({
         user_id: user.id,
-        workspace: 'business',
+        // workspace omitted on purpose — DB DEFAULT 'business' applies.
         name,
         type: 'checking',
         bank: 'asaas',

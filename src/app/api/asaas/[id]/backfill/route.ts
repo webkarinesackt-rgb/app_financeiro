@@ -117,7 +117,9 @@ export async function POST(
 
       batch.push({
         user_id: integration.user_id,
-        workspace: 'business',
+        // workspace omitted on purpose — DB DEFAULT 'business' applies.
+        // Including the column triggers PGRST204 when PostgREST's schema cache
+        // hasn't picked up migration 012 yet.
         type: 'income',
         amount: netValue,
         description: fullDesc,

@@ -75,7 +75,7 @@ export async function POST(
     .upsert(
       {
         user_id: integration.user_id,
-        workspace: 'business',
+        // workspace omitted on purpose — DB DEFAULT 'business' applies.
         type: 'income',
         amount: netValue,
         description: buildDescription(customerName, p.description),
