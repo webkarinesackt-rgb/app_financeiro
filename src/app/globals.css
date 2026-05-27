@@ -291,18 +291,20 @@
     opacity: 0.7;
   }
 
-  /* Sidebar refinado: fundo papel + filete dourado vertical na borda direita */
+  /* Sidebar Fysi: fundo deep teal-green com gradiente sutil (igual ao hero do Fysi Lab) */
   .sidebar-refined {
     background:
-      linear-gradient(to bottom, oklch(0.99 0.005 85), oklch(0.97 0.008 80));
-    border-right: 1px solid oklch(0.90 0.008 80);
+      radial-gradient(at 50% 0%, oklch(0.24 0.04 165), oklch(0.18 0.03 165) 60%),
+      linear-gradient(to bottom, oklch(0.20 0.035 165), oklch(0.16 0.025 165));
+    border-right: 1px solid oklch(0.14 0.025 165);
     position: relative;
+    color: oklch(0.92 0.012 85);
   }
   .sidebar-refined::after {
     content: '';
     position: absolute;
     top: 18%;
-    right: -1px;
+    right: 0;
     bottom: 18%;
     width: 1px;
     background: linear-gradient(
@@ -312,16 +314,24 @@
       var(--accent-gold) 70%,
       transparent
     );
-    opacity: 0.35;
+    opacity: 0.50;
+  }
+  /* Nav items dentro do sidebar Fysi */
+  .sidebar-refined .nav-item-idle {
+    color: oklch(0.75 0.015 85);
+  }
+  .sidebar-refined .nav-item-idle:hover {
+    background: oklch(0.28 0.04 165);
+    color: oklch(0.97 0.008 85);
   }
 
-  /* Item ativo do sidebar — dark ink com filete dourado no canto */
+  /* Item ativo do sidebar — fundo cream com texto ink (inverte pra destacar no sidebar escuro) */
   .nav-item-active {
-    background: var(--ink);
-    color: oklch(0.985 0.008 85);
+    background: oklch(0.97 0.012 85);
+    color: var(--ink);
     box-shadow:
-      0 1px 2px -1px oklch(0.18 0.03 165 / 0.20),
-      0 4px 12px -6px oklch(0.18 0.03 165 / 0.20);
+      0 1px 2px -1px oklch(0 0 0 / 0.25),
+      0 4px 12px -6px oklch(0 0 0 / 0.30);
   }
 }
 

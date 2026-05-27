@@ -56,7 +56,7 @@ export function Sidebar() {
       <div className="px-2 mb-5">
         <WorkspaceSwitcher />
       </div>
-      <div className="hairline mb-4 mx-2" />
+      <div className="mb-4 mx-2 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
 
       <nav className="flex flex-col gap-0.5 flex-1">
         {visibleNav.map((item) => {
@@ -68,7 +68,7 @@ export function Sidebar() {
                 'group relative flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all',
                 active
                   ? 'nav-item-active'
-                  : 'text-stone-600 hover:bg-stone-200/40 hover:text-stone-900'
+                  : 'nav-item-idle'
               )}>
                 <Icon className={cn('h-[15px] w-[15px] transition-colors', active ? 'text-[color:var(--accent-gold)]' : '')} />
                 {item.label}
@@ -86,7 +86,7 @@ export function Sidebar() {
             'flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all w-full',
             pathname.startsWith('/settings')
               ? 'nav-item-active'
-              : 'text-stone-600 hover:bg-stone-200/40 hover:text-stone-900'
+              : 'nav-item-idle'
           )}
         >
           <Settings className={cn('h-[15px] w-[15px]', pathname.startsWith('/settings') ? 'text-[color:var(--accent-gold)]' : '')} />
@@ -95,17 +95,17 @@ export function Sidebar() {
         </button>
 
         {settingsOpen && (
-          <div className="ml-7 mt-1 flex flex-col gap-0.5 border-l border-stone-200 pl-3">
+          <div className="ml-7 mt-1 flex flex-col gap-0.5 border-l border-white/15 pl-3">
             {visibleSettings.map((item) => (
               <Link key={item.href} href={item.href}>
                 <span className={cn(
                   'flex items-center px-2 py-1.5 rounded-md text-xs transition-colors',
                   pathname === item.href
-                    ? 'text-stone-900 font-semibold'
-                    : 'text-stone-500 hover:text-stone-800'
+                    ? 'text-stone-100 font-semibold'
+                    : 'text-stone-400 hover:text-stone-100'
                 )}>
                   {pathname === item.href && (
-                    <span className="mr-2 h-1 w-1 rounded-full bg-[color:var(--brand)] shrink-0" />
+                    <span className="mr-2 h-1 w-1 rounded-full bg-[color:var(--accent-gold)] shrink-0" />
                   )}
                   {item.label}
                 </span>
@@ -115,10 +115,10 @@ export function Sidebar() {
         )}
       </nav>
 
-      <Separator className="my-2" />
+      <div className="my-2 h-px bg-white/10" />
       <Button
         variant="ghost"
-        className="justify-start gap-3 text-slate-500 hover:text-red-600 hover:bg-red-50 text-sm"
+        className="justify-start gap-3 text-stone-400 hover:text-red-300 hover:bg-white/5 text-sm"
         onClick={handleLogout}
       >
         <LogOut className="h-4 w-4" />
