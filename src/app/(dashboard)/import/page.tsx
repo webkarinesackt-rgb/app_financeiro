@@ -20,16 +20,13 @@ import { useWorkspace } from '@/hooks/use-workspace'
 // Heurística: descrições que sugerem movimentação interna (entre contas
 // da mesma empresa, repasses de gateway, aplicações em CDB/poupança).
 // Vêm desmarcadas por padrão para não contar como receita ou despesa real.
-function isAsaasTransfer(description: string): boolean {
+//
+// No workspace pessoal, "Fysi Lab" / "Andrei" são RECEITAS reais (pró-labore,
+// transferência entre vocês), então NÃO devem ser auto-desmarcadas lá.
+function isAsaasTransfer(description: string, workspace: 'business' | 'personal' = 'business'): boolean {
   const d = description.toLowerCase()
-  // Repasses de gateway de pagamento (Asaas)
+  // Repasses de gateway de pagamento (Asaas) — duplicam Asaas em ambos os workspaces
   if (d.includes('asaas')) return true
-  // Transferências internas entre contas da Fysi
-  if (/\bfysi\s?lab\b/i.test(description)) return true
-  if (/fysi lab digital/i.test(description)) return true
-  // Pix recebido do Andrei = repasse de receita já contabilizada pela
-  // integração Asaas — importar de novo contaria a receita em dobro.
-  if (/pix\s+recebido/i.test(description) && /andrei\s+da\s+silva/i.test(description)) return true
   // Pagamento da fatura do cartão — as compras vêm na fatura importada à
   // parte; importar o pagamento aqui contaria a despesa em dobro.
   if (/fatura\s+cart/i.test(description)) return true
@@ -39,6 +36,15 @@ function isAsaasTransfer(description: string): boolean {
   if (/^resgate\b|\bresgate\s+(de\s+)?cdb\b/i.test(description)) return true
   if (/\bcdb\b.*(banco|inter|btg|nubank|xp)/i.test(description)) return true
   if (/^poupanca\b|\baplicacao poupanca\b|\bresgate poupanca\b/i.test(description)) return true
+
+  // Específicos da Fysi — só ignorar no workspace business (no pessoal,
+  // dinheiro vindo da Fysi É receita real: pró-labore, distribuição).
+  if (workspace === 'business') {
+    if (/\bfysi\s?lab\b/i.test(description)) return true
+    if (/fysi lab digital/i.test(description)) return true
+    if (/pix\s+recebido/i.test(description) && /andrei\s+da\s+silva/i.test(description)) return true
+  }
+
   return false
 }
 
@@ -134,7 +140,7 @@ export default function ImportPage() {
         ...t,
         // Desmarca automaticamente linhas que parecem repasse do Asaas
         // (já foram contabilizadas pela integração Asaas — evitar duplicar).
-        selected: !isAsaasTransfer(t.description),
+        selected: !isAsaasTransfer(t.description, workspace),
       }))
       const txs = await withInferredCategories(rawTxs)
 
