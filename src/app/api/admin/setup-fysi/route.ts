@@ -2,31 +2,52 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 /**
- * Endpoint TEMPORÁRIO de setup: lista users do auth.users pra descobrir
- * qual UUID setar em FYSI_OWNER_USER_ID. Removido após o setup inicial.
+ * Endpoint TEMPORÁRIO de setup. Removido após o setup inicial.
  *
- * Protegido por SETUP_TOKEN passado na query string.
+ *   ?action=list-users    → lista auth.users
+ *   ?action=check-schema  → confere se briefing_app_client_id existe
+ *
+ * A migration 014 deve ser aplicada via Supabase Dashboard → SQL Editor.
+ *
+ * Protegido por SETUP_TOKEN.
  */
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url)
   const token = url.searchParams.get('token')
+  const action = url.searchParams.get('action') ?? 'list-users'
   const expected = process.env.SETUP_TOKEN
   if (!expected || token !== expected) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 
   const admin = createAdminClient()
-  const { data, error } = await admin.auth.admin.listUsers()
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+
+  if (action === 'list-users') {
+    const { data, error } = await admin.auth.admin.listUsers()
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({
+      users: data.users.map((u) => ({
+        id: u.id,
+        email: u.email,
+        created_at: u.created_at,
+      })),
+    })
   }
 
-  return NextResponse.json({
-    users: data.users.map((u) => ({
-      id: u.id,
-      email: u.email,
-      created_at: u.created_at,
-    })),
-  })
+  if (action === 'check-schema') {
+    const { error } = await admin
+      .from('projects')
+      .select('briefing_app_client_id')
+      .limit(1)
+    return NextResponse.json({
+      hasColumn: !error,
+      error: error?.message ?? null,
+    })
+  }
+
+  return NextResponse.json(
+    { error: 'unknown action', actions: ['list-users', 'check-schema'] },
+    { status: 400 },
+  )
 }
