@@ -6,20 +6,21 @@ import { createAdminClient } from '@/lib/supabase/admin'
  * Webhook receiver do briefing_app.
  *
  * Eventos esperados (header X-Fysi-Event):
- *   - cliente.criado          → no-op (sem valor de contrato ainda; logamos só)
- *   - contrato.assinado       → upsert em projects (status='closed') com dados
- *                               do contrato. Chave: briefing_app_client_id.
- *   - pagamento.atualizado    → atualiza o project correspondente com total/pago.
- *                               Se pago >= total, marca status='paid'.
+ *   - cliente.criado          → no-op
+ *   - contrato.assinado       → upsert em projects (status='closed').
+ *                               Match por marcador no campo notes.
+ *   - pagamento.atualizado    → update do project linkado.
  *
  * Validação: HMAC-SHA256(body, FYSI_WEBHOOK_SECRET) comparado ao header
- * X-Fysi-Signature. Mesma key configurada no briefing_app
- * (DASHBOARD_WEBHOOK_SECRET).
+ * X-Fysi-Signature.
  *
- * Configurar env vars no Vercel desse app:
- *   FYSI_WEBHOOK_SECRET     — segredo compartilhado (idêntico ao do briefing_app)
- *   FYSI_OWNER_USER_ID      — UUID do user (auth.users.id) dono dos projects
- *                             criados pelo webhook. Sem isso, retorna 503.
+ * Match de project: procura pelo marcador "[fysi:<clientId>]" no campo
+ * `notes`. Esse marcador é gravado pelo webhook como primeira linha,
+ * assim conseguimos correlacionar sem precisar de coluna nova no schema.
+ *
+ * Envs:
+ *   FYSI_WEBHOOK_SECRET     — segredo idêntico ao DASHBOARD_WEBHOOK_SECRET
+ *   FYSI_OWNER_USER_ID      — auth.users.id dono dos projects criados
  */
 
 interface BriefingCliente {
@@ -71,10 +72,6 @@ const PROJECT_KIND_LABELS: Record<string, string> = {
   outro: 'Outro',
 }
 
-/**
- * Extrai valor numérico (R$) de uma string tipo "R$1.800,00 à vista ou 7x..."
- * Pega o primeiro número que aparece. Retorna null se não conseguir.
- */
 function parseValorString(raw: string | null | undefined): number | null {
   if (!raw) return null
   const match = raw.match(/(\d{1,3}(?:\.\d{3})*(?:,\d{2})?|\d+(?:\.\d{2})?)/)
@@ -96,6 +93,28 @@ function validateSignature(rawBody: string, headerSig: string | null): boolean {
   }
 }
 
+function makeFysiMarker(clientId: string): string {
+  return `[fysi:${clientId}]`
+}
+
+/**
+ * Busca project existente pelo marcador "[fysi:<clientId>]" em notes.
+ * Retorna o id do project, ou null se não achou.
+ */
+async function findProjectByFysiId(
+  admin: ReturnType<typeof createAdminClient>,
+  clientId: string,
+): Promise<string | null> {
+  const marker = makeFysiMarker(clientId)
+  const { data } = await admin
+    .from('projects')
+    .select('id, notes')
+    .like('notes', `%${marker}%`)
+    .limit(1)
+    .maybeSingle()
+  return data?.id ?? null
+}
+
 export async function POST(request: NextRequest) {
   const ownerUserId = process.env.FYSI_OWNER_USER_ID
   if (!ownerUserId) {
@@ -105,7 +124,7 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // 1. Lê body raw (essencial pra validar assinatura HMAC).
+  // 1. Body raw (essencial pra validar HMAC).
   const rawBody = await request.text()
 
   // 2. Valida assinatura.
@@ -114,7 +133,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'invalid signature' }, { status: 401 })
   }
 
-  // 3. Parse do JSON.
+  // 3. Parse JSON.
   let body: WebhookBody
   try {
     body = JSON.parse(rawBody)
@@ -129,27 +148,22 @@ export async function POST(request: NextRequest) {
   const admin = createAdminClient()
   const briefingClientId = body.clientId
 
-  // ── cliente.criado: só loga; não cria project (sem valor de contrato). ──
+  // ── cliente.criado: só loga (sem valor de contrato ainda). ──
   if (body.event === 'cliente.criado') {
     return NextResponse.json({ ok: true, action: 'logged' })
   }
 
-  // ── contrato.assinado: upsert do project ──
+  // ── contrato.assinado: upsert ──
   if (body.event === 'contrato.assinado') {
     if (!body.contrato) {
       return NextResponse.json({ error: 'missing contrato' }, { status: 400 })
     }
 
     const totalValue = parseValorString(body.contrato.valor_parcelamento)
+    const existingId = await findProjectByFysiId(admin, briefingClientId)
+
     if (!totalValue) {
-      // Sem valor → não consegue criar (constraint total_value > 0).
-      // Tenta atualizar se já existir.
-      const { data: existing } = await admin
-        .from('projects')
-        .select('id')
-        .eq('briefing_app_client_id', briefingClientId)
-        .maybeSingle()
-      if (existing) {
+      if (existingId) {
         await admin
           .from('projects')
           .update({
@@ -157,8 +171,8 @@ export async function POST(request: NextRequest) {
             notes: buildNotes(body),
             updated_at: new Date().toISOString(),
           })
-          .eq('id', existing.id)
-        return NextResponse.json({ ok: true, action: 'updated-no-value' })
+          .eq('id', existingId)
+        return NextResponse.json({ ok: true, action: 'updated-no-value', projectId: existingId })
       }
       return NextResponse.json(
         { error: 'no value parseable, project not created' },
@@ -178,7 +192,6 @@ export async function POST(request: NextRequest) {
 
     const payload = {
       user_id: ownerUserId,
-      briefing_app_client_id: briefingClientId,
       name,
       client_name: body.cliente.nome,
       whatsapp: body.cliente.whatsapp,
@@ -191,23 +204,16 @@ export async function POST(request: NextRequest) {
       payment_method: null,
     }
 
-    // Upsert por briefing_app_client_id (unique).
-    const { data: existing } = await admin
-      .from('projects')
-      .select('id')
-      .eq('briefing_app_client_id', briefingClientId)
-      .maybeSingle()
-
-    if (existing) {
+    if (existingId) {
       const { error } = await admin
         .from('projects')
         .update({ ...payload, updated_at: new Date().toISOString() })
-        .eq('id', existing.id)
+        .eq('id', existingId)
       if (error) {
         console.error('[fysi webhook] update project failed:', error)
-        return NextResponse.json({ error: 'update failed' }, { status: 500 })
+        return NextResponse.json({ error: 'update failed', detail: error.message }, { status: 500 })
       }
-      return NextResponse.json({ ok: true, action: 'updated', projectId: existing.id })
+      return NextResponse.json({ ok: true, action: 'updated', projectId: existingId })
     }
 
     const { data: created, error } = await admin
@@ -217,7 +223,7 @@ export async function POST(request: NextRequest) {
       .single()
     if (error || !created) {
       console.error('[fysi webhook] insert project failed:', error)
-      return NextResponse.json({ error: 'insert failed' }, { status: 500 })
+      return NextResponse.json({ error: 'insert failed', detail: error?.message }, { status: 500 })
     }
     return NextResponse.json({ ok: true, action: 'created', projectId: created.id })
   }
@@ -228,18 +234,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'missing pagamento' }, { status: 400 })
     }
 
-    const { data: existing } = await admin
-      .from('projects')
-      .select('id, total_value')
-      .eq('briefing_app_client_id', briefingClientId)
-      .maybeSingle()
-
-    if (!existing) {
-      // Sem project ainda — não cria (contrato.assinado é quem cria).
+    const existingId = await findProjectByFysiId(admin, briefingClientId)
+    if (!existingId) {
       return NextResponse.json({ ok: true, action: 'skipped-no-project' })
     }
 
-    const total = body.pagamento.total ?? Number(existing.total_value)
+    // Carrega o total_value atual pra calcular se quitou
+    const { data: current } = await admin
+      .from('projects')
+      .select('total_value')
+      .eq('id', existingId)
+      .maybeSingle()
+
+    const total = body.pagamento.total ?? Number(current?.total_value ?? 0)
     const pago = body.pagamento.pago
     const quitado = total > 0 && pago >= total
 
@@ -254,18 +261,15 @@ export async function POST(request: NextRequest) {
       updates.status = 'paid'
     }
 
-    const { error } = await admin
-      .from('projects')
-      .update(updates)
-      .eq('id', existing.id)
+    const { error } = await admin.from('projects').update(updates).eq('id', existingId)
     if (error) {
       console.error('[fysi webhook] update payment failed:', error)
-      return NextResponse.json({ error: 'update failed' }, { status: 500 })
+      return NextResponse.json({ error: 'update failed', detail: error.message }, { status: 500 })
     }
     return NextResponse.json({
       ok: true,
       action: 'updated',
-      projectId: existing.id,
+      projectId: existingId,
       quitado,
     })
   }
@@ -274,12 +278,13 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Monta um bloco de notas legível com os dados do contrato/pagamento atual.
- * Sobrescreve a cada update — não preserva histórico.
+ * Monta as notas. PRIMEIRA LINHA é o marcador "[fysi:<clientId>]" — usado
+ * pelo receiver pra correlacionar updates futuros ao mesmo project.
  */
 function buildNotes(body: WebhookBody): string {
   const lines: string[] = []
-  lines.push(`Origem: briefing_app (cliente ${body.clientId})`)
+  lines.push(makeFysiMarker(body.clientId))
+  lines.push(`Origem: briefing_app`)
   if (body.cliente.email) lines.push(`Email: ${body.cliente.email}`)
   if (body.cliente.cpf) lines.push(`CPF: ${body.cliente.cpf}`)
   if (body.cliente.cnpj) lines.push(`CNPJ: ${body.cliente.cnpj}`)
