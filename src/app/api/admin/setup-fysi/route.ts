@@ -47,10 +47,13 @@ export async function GET(request: NextRequest) {
   }
 
   if (action === 'delete-test-project') {
+    // Apaga todos os fysi:* de teste (UUIDs 00..00, 11..11, 99..99)
     const { error } = await admin
       .from('projects')
       .delete()
-      .like('notes', `%[fysi:99999999-9999-9999-9999-999999999999]%`)
+      .or(
+        `notes.like.%[fysi:00000000-0000-0000-0000-000000000000]%,notes.like.%[fysi:11111111-1111-1111-1111-111111111111]%,notes.like.%[fysi:99999999-9999-9999-9999-999999999999]%`,
+      )
     return NextResponse.json({ ok: !error, error: error?.message })
   }
 
