@@ -51,6 +51,23 @@ export async function createAccount(data: AccountInput): Promise<Account> {
   if (!user) throw new Error('Não autenticado')
   const workspace = getClientWorkspace()
 
+  // Caminho A: RPC que bypassa o cache de colunas do PostgREST.
+  const { data: rpcRows, error: rpcErr } = await supabase.rpc('create_account_v1', {
+    p_name: data.name,
+    p_type: data.type,
+    p_kind: data.kind ?? 'operational',
+    p_bank: data.bank ?? null,
+    p_color: data.color,
+    p_initial_balance: data.initial_balance ?? 0,
+    p_include_in_total: data.include_in_total ?? true,
+    p_workspace: workspace,
+  })
+  if (!rpcErr && Array.isArray(rpcRows) && rpcRows.length > 0) {
+    return rpcRows[0] as Account
+  }
+
+  // Caminho B (fallback): INSERT direto, caso a RPC não exista (migration ainda
+  // não aplicada). Sujeito ao PGRST204 se o cache não pegou workspace.
   const { data: account, error } = await supabase
     .from('accounts')
     .insert({ ...data, user_id: user.id, workspace })

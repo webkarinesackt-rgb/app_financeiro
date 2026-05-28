@@ -46,6 +46,14 @@ export async function GET(request: NextRequest) {
     })
   }
 
+  if (action === 'delete-test-project') {
+    const { error } = await admin
+      .from('projects')
+      .delete()
+      .like('notes', `%[fysi:99999999-9999-9999-9999-999999999999]%`)
+    return NextResponse.json({ ok: !error, error: error?.message })
+  }
+
   if (action === 'env-keys') {
     const keys = Object.keys(process.env)
       .filter((k) => /POSTGRES|DATABASE|SUPABASE|FYSI/i.test(k))

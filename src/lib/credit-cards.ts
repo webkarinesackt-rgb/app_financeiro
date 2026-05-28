@@ -49,6 +49,21 @@ export async function createCreditCard(data: CardInput): Promise<CreditCard> {
   if (!user) throw new Error('Não autenticado')
   const workspace = getClientWorkspace()
 
+  // Caminho A: RPC que bypassa o cache de colunas do PostgREST.
+  const { data: rpcRows, error: rpcErr } = await supabase.rpc('create_credit_card_v1', {
+    p_name: data.name,
+    p_bank: data.bank ?? null,
+    p_color: data.color,
+    p_credit_limit: data.credit_limit ?? 0,
+    p_closing_day: data.closing_day ?? null,
+    p_due_day: data.due_day ?? null,
+    p_workspace: workspace,
+  })
+  if (!rpcErr && Array.isArray(rpcRows) && rpcRows.length > 0) {
+    return rpcRows[0] as CreditCard
+  }
+
+  // Caminho B (fallback): INSERT direto.
   const { data: card, error } = await supabase
     .from('credit_cards')
     .insert({ ...data, user_id: user.id, workspace })
