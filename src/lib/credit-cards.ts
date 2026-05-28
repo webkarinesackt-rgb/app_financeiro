@@ -49,7 +49,7 @@ export async function createCreditCard(data: CardInput): Promise<CreditCard> {
   if (!user) throw new Error('Não autenticado')
   const workspace = getClientWorkspace()
 
-  // Caminho A: RPC que bypassa o cache de colunas do PostgREST.
+  // RPC que bypassa o cache de colunas do PostgREST. Migration 014 obrigatória.
   const { data: rpcRows, error: rpcErr } = await supabase.rpc('create_credit_card_v1', {
     p_name: data.name,
     p_bank: data.bank ?? null,
@@ -59,18 +59,13 @@ export async function createCreditCard(data: CardInput): Promise<CreditCard> {
     p_due_day: data.due_day ?? null,
     p_workspace: workspace,
   })
-  if (!rpcErr && Array.isArray(rpcRows) && rpcRows.length > 0) {
-    return rpcRows[0] as CreditCard
+  if (rpcErr) {
+    throw new Error(`RPC create_credit_card_v1 falhou: ${rpcErr.message} (code ${rpcErr.code ?? 'n/a'})`)
   }
-
-  // Caminho B (fallback): INSERT direto.
-  const { data: card, error } = await supabase
-    .from('credit_cards')
-    .insert({ ...data, user_id: user.id, workspace })
-    .select()
-    .single()
-  if (error) throw error
-  return card
+  if (!Array.isArray(rpcRows) || rpcRows.length === 0) {
+    throw new Error('RPC create_credit_card_v1 não retornou nenhuma linha')
+  }
+  return rpcRows[0] as CreditCard
 }
 
 export async function updateCreditCard(id: string, data: Partial<CardInput>): Promise<CreditCard> {

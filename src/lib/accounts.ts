@@ -51,7 +51,7 @@ export async function createAccount(data: AccountInput): Promise<Account> {
   if (!user) throw new Error('Não autenticado')
   const workspace = getClientWorkspace()
 
-  // Caminho A: RPC que bypassa o cache de colunas do PostgREST.
+  // RPC que bypassa o cache de colunas do PostgREST. Migration 014 é obrigatória.
   const { data: rpcRows, error: rpcErr } = await supabase.rpc('create_account_v1', {
     p_name: data.name,
     p_type: data.type,
@@ -62,19 +62,13 @@ export async function createAccount(data: AccountInput): Promise<Account> {
     p_include_in_total: data.include_in_total ?? true,
     p_workspace: workspace,
   })
-  if (!rpcErr && Array.isArray(rpcRows) && rpcRows.length > 0) {
-    return rpcRows[0] as Account
+  if (rpcErr) {
+    throw new Error(`RPC create_account_v1 falhou: ${rpcErr.message} (code ${rpcErr.code ?? 'n/a'})`)
   }
-
-  // Caminho B (fallback): INSERT direto, caso a RPC não exista (migration ainda
-  // não aplicada). Sujeito ao PGRST204 se o cache não pegou workspace.
-  const { data: account, error } = await supabase
-    .from('accounts')
-    .insert({ ...data, user_id: user.id, workspace })
-    .select()
-    .single()
-  if (error) throw error
-  return account
+  if (!Array.isArray(rpcRows) || rpcRows.length === 0) {
+    throw new Error('RPC create_account_v1 não retornou nenhuma linha')
+  }
+  return rpcRows[0] as Account
 }
 
 export async function updateAccount(id: string, data: Partial<AccountInput>): Promise<Account> {
