@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { parseStage, withStage } from '@/lib/project-stages'
 
 /**
  * Webhook receiver do briefing_app.
@@ -104,7 +105,7 @@ function makeFysiMarker(clientId: string): string {
 async function findProjectByFysiId(
   admin: ReturnType<typeof createAdminClient>,
   clientId: string,
-): Promise<string | null> {
+): Promise<{ id: string; notes: string | null } | null> {
   const marker = makeFysiMarker(clientId)
   const { data } = await admin
     .from('projects')
@@ -112,7 +113,7 @@ async function findProjectByFysiId(
     .like('notes', `%${marker}%`)
     .limit(1)
     .maybeSingle()
-  return data?.id ?? null
+  return data ?? null
 }
 
 export async function POST(request: NextRequest) {
@@ -160,7 +161,10 @@ export async function POST(request: NextRequest) {
     }
 
     const totalValue = parseValorString(body.contrato.valor_parcelamento)
-    const existingId = await findProjectByFysiId(admin, briefingClientId)
+    const existing = await findProjectByFysiId(admin, briefingClientId)
+    const existingId = existing?.id ?? null
+    // Preserva o stage atual se já existe; novo project começa em 'a_iniciar'.
+    const currentStage = existing ? parseStage(existing.notes) : 'a_iniciar'
 
     if (!totalValue) {
       if (existingId) {
@@ -168,7 +172,7 @@ export async function POST(request: NextRequest) {
           .from('projects')
           .update({
             status: 'closed',
-            notes: buildNotes(body),
+            notes: withStage(buildNotes(body), currentStage),
             updated_at: new Date().toISOString(),
           })
           .eq('id', existingId)
@@ -200,7 +204,7 @@ export async function POST(request: NextRequest) {
       channel: 'briefing_app',
       status: 'closed',
       start_date: body.emittedAt.slice(0, 10),
-      notes: buildNotes(body),
+      notes: withStage(buildNotes(body), currentStage),
       payment_method: null,
     }
 
@@ -234,8 +238,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'missing pagamento' }, { status: 400 })
     }
 
-    const existingId = await findProjectByFysiId(admin, briefingClientId)
-    if (!existingId) {
+    const existing = await findProjectByFysiId(admin, briefingClientId)
+    if (!existing) {
       return NextResponse.json({ ok: true, action: 'skipped-no-project' })
     }
 
@@ -243,15 +247,16 @@ export async function POST(request: NextRequest) {
     const { data: current } = await admin
       .from('projects')
       .select('total_value')
-      .eq('id', existingId)
+      .eq('id', existing.id)
       .maybeSingle()
 
     const total = body.pagamento.total ?? Number(current?.total_value ?? 0)
     const pago = body.pagamento.pago
     const quitado = total > 0 && pago >= total
+    const currentStage = parseStage(existing.notes)
 
     const updates: Record<string, unknown> = {
-      notes: buildNotes(body),
+      notes: withStage(buildNotes(body), currentStage),
       updated_at: new Date().toISOString(),
     }
     if (body.pagamento.total && body.pagamento.total > 0) {
@@ -261,7 +266,7 @@ export async function POST(request: NextRequest) {
       updates.status = 'paid'
     }
 
-    const { error } = await admin.from('projects').update(updates).eq('id', existingId)
+    const { error } = await admin.from('projects').update(updates).eq('id', existing.id)
     if (error) {
       console.error('[fysi webhook] update payment failed:', error)
       return NextResponse.json({ error: 'update failed', detail: error.message }, { status: 500 })
@@ -269,7 +274,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       action: 'updated',
-      projectId: existingId,
+      projectId: existing.id,
       quitado,
     })
   }
