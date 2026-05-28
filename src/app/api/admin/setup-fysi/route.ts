@@ -46,6 +46,13 @@ export async function GET(request: NextRequest) {
     })
   }
 
+  if (action === 'env-keys') {
+    const keys = Object.keys(process.env)
+      .filter((k) => /POSTGRES|DATABASE|SUPABASE|FYSI/i.test(k))
+      .sort()
+    return NextResponse.json({ keys })
+  }
+
   if (action === 'project-info') {
     // Devolve a URL do Supabase que o runtime está usando + um sample do
     // projects pra confirmar qual DB é.
