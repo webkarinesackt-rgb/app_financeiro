@@ -46,8 +46,24 @@ export async function GET(request: NextRequest) {
     })
   }
 
+  if (action === 'project-info') {
+    // Devolve a URL do Supabase que o runtime está usando + um sample do
+    // projects pra confirmar qual DB é.
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+    const ref = supabaseUrl.match(/https:\/\/([a-z0-9]+)\.supabase\.co/)?.[1] ?? null
+    const { count, error } = await admin
+      .from('projects')
+      .select('id', { count: 'exact', head: true })
+    return NextResponse.json({
+      supabaseUrl,
+      projectRef: ref,
+      projectsCount: count,
+      error: error?.message ?? null,
+    })
+  }
+
   return NextResponse.json(
-    { error: 'unknown action', actions: ['list-users', 'check-schema'] },
+    { error: 'unknown action', actions: ['list-users', 'check-schema', 'project-info'] },
     { status: 400 },
   )
 }
