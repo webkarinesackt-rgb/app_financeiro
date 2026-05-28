@@ -7,6 +7,16 @@ type AccountInput = Omit<Account, 'id' | 'user_id' | 'workspace' | 'created_at' 
 export async function getAccounts(): Promise<Account[]> {
   const supabase = createClient()
   const workspace = getClientWorkspace()
+
+  // Tenta RPC primeiro — bypassa cache de colunas do PostgREST
+  const { data: rpcRows, error: rpcErr } = await supabase.rpc('list_accounts_v1', {
+    p_workspace: workspace,
+  })
+  if (!rpcErr && Array.isArray(rpcRows)) {
+    return rpcRows as Account[]
+  }
+
+  // Fallback: SELECT + filtro client-side (depende do workspace estar no payload)
   const { data, error } = await supabase
     .from('accounts')
     .select('*')
