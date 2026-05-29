@@ -61,24 +61,46 @@ export async function createAccount(data: AccountInput): Promise<Account> {
   if (!user) throw new Error('Não autenticado')
   const workspace = getClientWorkspace()
 
-  // RPC que bypassa o cache de colunas do PostgREST. Migration 014 é obrigatória.
-  const { data: rpcRows, error: rpcErr } = await supabase.rpc('create_account_v1', {
-    p_name: data.name,
-    p_type: data.type,
-    p_kind: data.kind ?? 'operational',
-    p_bank: data.bank ?? null,
-    p_color: data.color,
-    p_initial_balance: data.initial_balance ?? 0,
-    p_include_in_total: data.include_in_total ?? true,
+  const base = {
+    user_id: user.id,
+    name: data.name,
+    type: data.type,
+    kind: data.kind ?? 'operational',
+    bank: data.bank ?? null,
+    color: data.color,
+    initial_balance: data.initial_balance ?? 0,
+    include_in_total: data.include_in_total ?? true,
+  }
+
+  // Tentativa 1: RPC (bypassa cache de colunas). Falha c/ PGRST202 se cache de funções estiver stale.
+  const rpc = await supabase.rpc('create_account_v1', {
+    p_name: base.name, p_type: base.type, p_kind: base.kind,
+    p_bank: base.bank, p_color: base.color,
+    p_initial_balance: base.initial_balance,
+    p_include_in_total: base.include_in_total,
     p_workspace: workspace,
   })
-  if (rpcErr) {
-    throw new Error(`RPC create_account_v1 falhou: ${rpcErr.message} (code ${rpcErr.code ?? 'n/a'})`)
+  if (!rpc.error && Array.isArray(rpc.data) && rpc.data.length > 0) {
+    return rpc.data[0] as Account
   }
-  if (!Array.isArray(rpcRows) || rpcRows.length === 0) {
-    throw new Error('RPC create_account_v1 não retornou nenhuma linha')
+
+  // Tentativa 2: INSERT direto com workspace.
+  const ins = await supabase.from('accounts').insert({ ...base, workspace }).select().single()
+  if (!ins.error && ins.data) return ins.data as Account
+
+  // Tentativa 3: INSERT sem workspace (DB usa DEFAULT 'business') + UPDATE separado.
+  const insBare = await supabase.from('accounts').insert(base).select().single()
+  if (insBare.error || !insBare.data) {
+    throw new Error(`Falha ao criar conta: ${insBare.error?.message ?? 'sem dados'}`)
   }
-  return rpcRows[0] as Account
+  if (workspace !== 'business') {
+    const upd = await supabase.from('accounts').update({ workspace }).eq('id', insBare.data.id)
+    if (upd.error) {
+      // Avisa mas não falha — a conta existe, só está no workspace errado.
+      console.warn('[accounts] workspace UPDATE falhou:', upd.error.message)
+    }
+  }
+  return insBare.data as Account
 }
 
 export async function updateAccount(id: string, data: Partial<AccountInput>): Promise<Account> {

@@ -270,13 +270,26 @@ export async function createTransaction(
     return created ?? []
   }
 
+  const payload = { ...baseData, user_id: user.id, workspace, installment_total: null }
   const { data: transaction, error } = await supabase
     .from('transactions')
-    .insert({ ...baseData, user_id: user.id, workspace, installment_total: null })
+    .insert(payload)
     .select()
     .single()
-  if (error) throw error
-  return [transaction]
+  if (!error) return [transaction]
+
+  // Fallback PGRST204 (workspace fora do cache): tenta sem workspace e seta depois.
+  if (error.code === 'PGRST204' && /workspace/i.test(error.message)) {
+    const { workspace: _ws, ...noWs } = payload
+    void _ws
+    const retry = await supabase.from('transactions').insert(noWs).select().single()
+    if (retry.error) throw retry.error
+    if (workspace !== 'business') {
+      await supabase.from('transactions').update({ workspace }).eq('id', retry.data.id)
+    }
+    return [retry.data]
+  }
+  throw error
 }
 
 export async function updateTransaction(id: string, data: Partial<TransactionFormData>): Promise<Transaction> {

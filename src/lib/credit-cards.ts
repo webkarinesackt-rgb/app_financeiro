@@ -49,23 +49,41 @@ export async function createCreditCard(data: CardInput): Promise<CreditCard> {
   if (!user) throw new Error('Não autenticado')
   const workspace = getClientWorkspace()
 
-  // RPC que bypassa o cache de colunas do PostgREST. Migration 014 obrigatória.
-  const { data: rpcRows, error: rpcErr } = await supabase.rpc('create_credit_card_v1', {
-    p_name: data.name,
-    p_bank: data.bank ?? null,
-    p_color: data.color,
-    p_credit_limit: data.credit_limit ?? 0,
-    p_closing_day: data.closing_day ?? null,
-    p_due_day: data.due_day ?? null,
+  const base = {
+    user_id: user.id,
+    name: data.name,
+    bank: data.bank ?? null,
+    color: data.color,
+    credit_limit: data.credit_limit ?? 0,
+    closing_day: data.closing_day ?? null,
+    due_day: data.due_day ?? null,
+  }
+
+  // Tentativa 1: RPC.
+  const rpc = await supabase.rpc('create_credit_card_v1', {
+    p_name: base.name, p_bank: base.bank, p_color: base.color,
+    p_credit_limit: base.credit_limit,
+    p_closing_day: base.closing_day, p_due_day: base.due_day,
     p_workspace: workspace,
   })
-  if (rpcErr) {
-    throw new Error(`RPC create_credit_card_v1 falhou: ${rpcErr.message} (code ${rpcErr.code ?? 'n/a'})`)
+  if (!rpc.error && Array.isArray(rpc.data) && rpc.data.length > 0) {
+    return rpc.data[0] as CreditCard
   }
-  if (!Array.isArray(rpcRows) || rpcRows.length === 0) {
-    throw new Error('RPC create_credit_card_v1 não retornou nenhuma linha')
+
+  // Tentativa 2: INSERT direto com workspace.
+  const ins = await supabase.from('credit_cards').insert({ ...base, workspace }).select().single()
+  if (!ins.error && ins.data) return ins.data as CreditCard
+
+  // Tentativa 3: INSERT sem workspace + UPDATE.
+  const insBare = await supabase.from('credit_cards').insert(base).select().single()
+  if (insBare.error || !insBare.data) {
+    throw new Error(`Falha ao criar cartão: ${insBare.error?.message ?? 'sem dados'}`)
   }
-  return rpcRows[0] as CreditCard
+  if (workspace !== 'business') {
+    const upd = await supabase.from('credit_cards').update({ workspace }).eq('id', insBare.data.id)
+    if (upd.error) console.warn('[credit-cards] workspace UPDATE falhou:', upd.error.message)
+  }
+  return insBare.data as CreditCard
 }
 
 export async function updateCreditCard(id: string, data: Partial<CardInput>): Promise<CreditCard> {

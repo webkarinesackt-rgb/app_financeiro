@@ -143,6 +143,16 @@ export function TransactionForm({ open, onClose, onSuccess, transaction, default
     if (isNaN(numAmount) || numAmount <= 0) { toast.error('Valor inválido'); return }
     if (category === 'custom' && !customCategory.trim()) { toast.error('Informe o nome da categoria personalizada'); return }
 
+    // Valida que conta/cartão selecionados existem no workspace atual
+    if (accountId && !accounts.some((a) => a.id === accountId)) {
+      toast.error('Conta selecionada não existe neste workspace. Escolha outra.')
+      return
+    }
+    if (creditCardId && !cards.some((c) => c.id === creditCardId)) {
+      toast.error('Cartão selecionado não existe neste workspace. Escolha outro.')
+      return
+    }
+
     const finalCustom = category === 'custom' ? customCategory.trim() : null
     const subcategoryOptions = getSubcategoryOptions(finalCustom)
     const finalSubcategory =
@@ -203,8 +213,10 @@ export function TransactionForm({ open, onClose, onSuccess, transaction, default
       }
       onSuccess()
       onClose()
-    } catch {
-      toast.error('Erro ao salvar transação')
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      console.error('[transaction-form] save failed:', e)
+      toast.error(`Erro ao salvar: ${msg}`)
     } finally {
       setLoading(false)
     }

@@ -335,10 +335,22 @@
   }
 }
 
+/* ─── Modo "ocultar dados" — blur global em qualquer .private ─── */
+html[data-hide-values="true"] .private {
+  filter: blur(8px);
+  user-select: none;
+  transition: filter 0.15s ease;
+}
+html[data-hide-values="true"] .private:hover {
+  filter: blur(0);
+}
+
 @media print {
   /* Garante que cores de gráficos e cards saiam no PDF */
   * {
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
   }
+  /* Nunca borrar no PDF — relatórios precisam ser legíveis */
+  html[data-hide-values="true"] .private { filter: none; }
 }

@@ -6,9 +6,10 @@ import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { LayoutDashboard, ArrowLeftRight, BarChart3, Settings, LogOut, ChevronDown, CalendarCheck, Handshake, PiggyBank, LineChart, AlertCircle, Sparkles, Activity, Upload, Kanban } from 'lucide-react'
+import { LayoutDashboard, ArrowLeftRight, BarChart3, Settings, LogOut, ChevronDown, CalendarCheck, Handshake, PiggyBank, LineChart, AlertCircle, Sparkles, Activity, Upload, Kanban, Eye, EyeOff } from 'lucide-react'
 import { WorkspaceSwitcher } from '@/components/workspace/workspace-switcher'
 import { useWorkspace } from '@/hooks/use-workspace'
+import { usePrivacy } from '@/hooks/use-privacy'
 import type { WorkspaceType } from '@/types'
 import { toast } from 'sonner'
 import { useState } from 'react'
@@ -39,6 +40,7 @@ export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const workspace = useWorkspace()
+  const { hidden, toggle } = usePrivacy()
   const [settingsOpen, setSettingsOpen] = useState(pathname.startsWith('/settings'))
 
   const visibleNav = navItems.filter((i) => i.workspaces.includes(workspace))
@@ -54,8 +56,16 @@ export function Sidebar() {
 
   return (
     <aside className="sidebar-refined flex flex-col w-64 min-h-screen px-3 py-6 gap-1 shrink-0">
-      <div className="px-2 mb-5">
-        <WorkspaceSwitcher />
+      <div className="px-2 mb-3 flex items-center gap-2">
+        <div className="flex-1 min-w-0"><WorkspaceSwitcher /></div>
+        <button
+          onClick={toggle}
+          title={hidden ? 'Mostrar valores' : 'Ocultar valores'}
+          aria-label={hidden ? 'Mostrar valores' : 'Ocultar valores'}
+          className="shrink-0 h-8 w-8 inline-flex items-center justify-center rounded-md text-stone-300 hover:text-stone-100 hover:bg-white/10 transition-colors"
+        >
+          {hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
       </div>
       <div className="mb-4 mx-2 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
 

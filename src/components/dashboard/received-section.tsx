@@ -1,23 +1,18 @@
 'use client'
 
 import { Card, CardContent } from '@/components/ui/card'
-import { ArrowDownLeft, TrendingUp, TrendingDown } from 'lucide-react'
+import { ArrowDownLeft } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import type { AccountWithBalance, Transaction } from '@/types'
 
 interface Props {
   transactions: Transaction[]       // mês atual
-  prevTransactions: Transaction[]   // mês anterior
   accounts: AccountWithBalance[]
   monthLabel: string                // "Maio/2026"
-  prevMonthLabel: string            // "Abril/2026"
 }
 
-export function ReceivedSection({ transactions, prevTransactions, accounts, monthLabel, prevMonthLabel }: Props) {
+export function ReceivedSection({ transactions, accounts, monthLabel }: Props) {
   const total = sumIncome(transactions)
-  const prevTotal = sumIncome(prevTransactions)
-  const delta = prevTotal === 0 ? null : ((total - prevTotal) / prevTotal) * 100
-  const isUp = (delta ?? 0) >= 0
 
   // Por origem (account)
   const byAccount = groupByAccount(transactions, accounts)
@@ -33,20 +28,9 @@ export function ReceivedSection({ transactions, prevTransactions, accounts, mont
 
       <Card className="border border-emerald-100 shadow-sm bg-gradient-to-br from-emerald-50/40 to-white">
         <CardContent className="pt-5 pb-5 space-y-5">
-          {/* Total + comparação */}
+          {/* Total */}
           <div>
             <p className="text-3xl font-bold text-emerald-700 leading-tight">{formatCurrency(total)}</p>
-            <div className="flex items-center gap-2 mt-1">
-              {delta === null ? (
-                <span className="text-xs text-slate-400">Sem dados de {prevMonthLabel}</span>
-              ) : (
-                <span className={`inline-flex items-center gap-1 text-xs font-semibold ${isUp ? 'text-emerald-600' : 'text-red-500'}`}>
-                  {isUp ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                  {delta >= 0 ? '+' : ''}{delta.toFixed(1)}%
-                  <span className="text-slate-400 font-normal ml-1">vs {prevMonthLabel} ({formatCurrency(prevTotal)})</span>
-                </span>
-              )}
-            </div>
           </div>
 
           {/* Por origem */}

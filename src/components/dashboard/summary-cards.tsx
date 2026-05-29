@@ -45,7 +45,7 @@ export function SummaryCards({ summary }: SummaryCardsProps) {
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-sm text-slate-500 mb-1">{card.label}</p>
-                  <p className={`text-2xl font-bold ${card.color}`}>
+                  <p className={`text-2xl font-bold private ${card.color}`}>
                     {formatCurrency(card.value)}
                   </p>
                 </div>

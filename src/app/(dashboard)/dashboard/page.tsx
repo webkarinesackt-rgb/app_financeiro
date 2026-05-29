@@ -9,6 +9,7 @@ import { getTransactions } from '@/lib/transactions'
 import { formatCurrency } from '@/lib/format'
 import { getCategoryLabelByWorkspace, getBankColor, type AccountWithBalance, type CreditCardWithUsage, type Transaction, type Category } from '@/types'
 import { useWorkspace } from '@/hooks/use-workspace'
+import { usePrivacy } from '@/hooks/use-privacy'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { TransactionForm } from '@/components/transactions/transaction-form'
@@ -42,32 +43,27 @@ export default function DashboardPage() {
   const [accounts, setAccounts] = useState<AccountWithBalance[]>([])
   const [cards, setCards] = useState<CreditCardWithUsage[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [prevTransactions, setPrevTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
-  const [showBalances, setShowBalances] = useState(true)
+  const { hidden, toggle } = usePrivacy()
+  const showBalances = !hidden
   const [showForm, setShowForm] = useState(false)
   const [formType, setFormType] = useState<'income' | 'expense'>('expense')
-
-  const prevMonth = month === 1 ? 12 : month - 1
-  const prevYear = month === 1 ? year - 1 : year
 
   const fetchData = useCallback(async () => {
     setLoading(true)
     const supabase = createClient()
-    const [{ data: { user } }, accs, crds, txs, prevTxs] = await Promise.all([
+    const [{ data: { user } }, accs, crds, txs] = await Promise.all([
       supabase.auth.getUser(),
       getAccountsWithBalances(),
       getCreditCardsWithUsage(month, year),
       getTransactions({ month, year }),
-      getTransactions({ month: prevMonth, year: prevYear }),
     ])
     setUserEmail(user?.email?.split('@')[0] ?? 'Usuário')
     setAccounts(accs)
     setCards(crds)
     setTransactions(txs)
-    setPrevTransactions(prevTxs)
     setLoading(false)
-  }, [month, year, prevMonth, prevYear])
+  }, [month, year])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -115,7 +111,7 @@ export default function DashboardPage() {
               <p className="text-slate-500 text-sm">{getGreeting()},</p>
               <h1 className="text-lg font-bold text-slate-800 capitalize leading-tight">{userEmail}!</h1>
             </div>
-            <button onClick={() => setShowBalances(!showBalances)}
+            <button onClick={() => toggle()}
               className="flex items-center justify-center h-8 w-8 rounded-full text-slate-400 hover:bg-slate-100 transition-colors">
               {showBalances ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
             </button>
@@ -126,10 +122,8 @@ export default function DashboardPage() {
       {/* ═══ RECEBIDO ═══ */}
       <ReceivedSection
         transactions={transactions}
-        prevTransactions={prevTransactions}
         accounts={accounts}
         monthLabel={MONTHS_PT[month - 1]}
-        prevMonthLabel={MONTHS_PT[prevMonth - 1]}
       />
 
       {/* ═══ AGUARDANDO REPASSE (CONFIRMED) ═══ */}
@@ -201,7 +195,7 @@ export default function DashboardPage() {
                 <div className="w-1 h-5 rounded-full bg-emerald-500" />
                 <span className="text-sm text-slate-500">Saldo geral</span>
               </div>
-              <button onClick={() => setShowBalances(!showBalances)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => toggle()} className="text-slate-400 hover:text-slate-600">
                 {showBalances ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
               </button>
             </div>
