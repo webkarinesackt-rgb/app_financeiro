@@ -5,8 +5,8 @@ import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import {
-  LayoutDashboard, ArrowLeftRight, BarChart3,
-  Settings, LogOut, Plus, Handshake, PiggyBank, LineChart,
+  LayoutDashboard, ArrowLeftRight, Settings,
+  LogOut, Plus, PiggyBank, LineChart,
 } from 'lucide-react'
 import { Logo } from '@/components/brand/logo'
 import { useWorkspace } from '@/hooks/use-workspace'
@@ -41,8 +41,6 @@ export function MobileNav() {
     router.push('/login')
     router.refresh()
   }
-
-  const userInitial = ''
 
   return (
     <>

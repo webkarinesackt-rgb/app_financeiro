@@ -5,8 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
-import { LayoutDashboard, ArrowLeftRight, BarChart3, Settings, LogOut, ChevronDown, CalendarCheck, Handshake, PiggyBank, LineChart, AlertCircle, Sparkles, Activity, Upload, Kanban, Eye, EyeOff } from 'lucide-react'
+import { LayoutDashboard, ArrowLeftRight, BarChart3, Settings, LogOut, ChevronDown, CalendarCheck, Handshake, PiggyBank, LineChart, AlertCircle, Sparkles, Activity, Upload, Eye, EyeOff } from 'lucide-react'
 import { WorkspaceSwitcher } from '@/components/workspace/workspace-switcher'
 import { useWorkspace } from '@/hooks/use-workspace'
 import { usePrivacy } from '@/hooks/use-privacy'
@@ -20,7 +19,6 @@ const navItems: { href: string; label: string; icon: typeof LayoutDashboard; wor
   { href: '/transactions', label: 'Lançamentos',    icon: ArrowLeftRight,  workspaces: ['business', 'personal'] },
   { href: '/a-cobrar',     label: 'A Cobrar',       icon: AlertCircle,     workspaces: ['business'] },
   { href: '/closings',     label: 'Fechamentos',    icon: Handshake,       workspaces: ['business'] },
-  { href: '/etapas',       label: 'Etapas',         icon: Kanban,          workspaces: ['business'] },
   { href: '/reservas',     label: 'Reservas',       icon: PiggyBank,       workspaces: ['business'] },
   { href: '/previsao',     label: 'Previsão',       icon: LineChart,       workspaces: ['business'] },
   { href: '/reports',      label: 'Relatórios',     icon: BarChart3,       workspaces: ['business', 'personal'] },
