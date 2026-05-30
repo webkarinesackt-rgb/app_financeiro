@@ -104,17 +104,17 @@ function TransactionsContent() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
           <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3">
             <p className="text-xs text-emerald-600 font-medium">Receitas</p>
-            <p className="text-lg font-bold text-emerald-700">{formatCurrency(totalIncome)}</p>
+            <p className="text-lg font-bold text-emerald-700 private">{formatCurrency(totalIncome)}</p>
           </div>
           <div className="bg-red-50 border border-red-100 rounded-xl p-3">
             <p className="text-xs text-red-500 font-medium">Despesas</p>
-            <p className="text-lg font-bold text-red-600">{formatCurrency(totalExpenses)}</p>
+            <p className="text-lg font-bold text-red-600 private">{formatCurrency(totalExpenses)}</p>
           </div>
           <div className={`col-span-2 sm:col-span-1 border rounded-xl p-3 ${
             totalIncome - totalExpenses >= 0 ? 'bg-blue-50 border-blue-100' : 'bg-red-50 border-red-100'
           }`}>
             <p className={`text-xs font-medium ${totalIncome - totalExpenses >= 0 ? 'text-blue-600' : 'text-red-500'}`}>Saldo</p>
-            <p className={`text-lg font-bold ${totalIncome - totalExpenses >= 0 ? 'text-blue-700' : 'text-red-600'}`}>
+            <p className={`text-lg font-bold private ${totalIncome - totalExpenses >= 0 ? 'text-blue-700' : 'text-red-600'}`}>
               {formatCurrency(totalIncome - totalExpenses)}
             </p>
           </div>

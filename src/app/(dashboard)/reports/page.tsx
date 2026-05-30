@@ -241,7 +241,7 @@ function ReportsContent() {
             <Card className="border border-slate-100 shadow-sm">
               <CardContent className="pt-4 pb-4">
                 <p className="text-xs text-slate-500">Receita total</p>
-                <p className="text-xl font-bold text-emerald-600">{formatCurrency(totalIncome)}</p>
+                <p className="text-xl font-bold text-emerald-600 private">{formatCurrency(totalIncome)}</p>
                 {comparing && (
                   <>
                     <p className="text-xs text-slate-400 mt-1">vs {formatCurrency(totalIncomeB)}</p>
@@ -396,7 +396,7 @@ function ReportsContent() {
             <Card className="border border-slate-100 shadow-sm">
               <CardContent className="pt-4 pb-4">
                 <p className="text-xs text-slate-500">Total de despesas</p>
-                <p className="text-xl font-bold text-red-500">{formatCurrency(totalExpenses)}</p>
+                <p className="text-xl font-bold text-red-500 private">{formatCurrency(totalExpenses)}</p>
                 {comparing && (
                   <>
                     <p className="text-xs text-slate-400 mt-1">vs {formatCurrency(totalExpensesB)}</p>
@@ -511,7 +511,7 @@ function ReportsContent() {
             <Card className="border border-slate-100 shadow-sm">
               <CardContent className="pt-4 pb-4">
                 <p className="text-xs text-slate-500">Receitas</p>
-                <p className="text-lg font-bold text-emerald-600">{formatCurrency(totalIncome)}</p>
+                <p className="text-lg font-bold text-emerald-600 private">{formatCurrency(totalIncome)}</p>
                 {comparing && (
                   <>
                     <p className="text-xs text-slate-400 mt-1">vs {formatCurrency(totalIncomeB)}</p>
@@ -523,7 +523,7 @@ function ReportsContent() {
             <Card className="border border-slate-100 shadow-sm">
               <CardContent className="pt-4 pb-4">
                 <p className="text-xs text-slate-500">Despesas</p>
-                <p className="text-lg font-bold text-red-500">{formatCurrency(totalExpenses)}</p>
+                <p className="text-lg font-bold text-red-500 private">{formatCurrency(totalExpenses)}</p>
                 {comparing && (
                   <>
                     <p className="text-xs text-slate-400 mt-1">vs {formatCurrency(totalExpensesB)}</p>

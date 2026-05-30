@@ -73,7 +73,7 @@ export default function CardsPage() {
           <CardContent className="py-3 px-4">
             <div className="flex items-center justify-between">
               <span className="text-sm text-slate-600">Limite total disponível</span>
-              <span className="text-base font-bold text-blue-700">{formatCurrency(totalLimit)}</span>
+              <span className="text-base font-bold text-blue-700 private">{formatCurrency(totalLimit)}</span>
             </div>
           </CardContent>
         </Card>

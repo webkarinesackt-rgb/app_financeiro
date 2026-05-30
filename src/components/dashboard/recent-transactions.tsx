@@ -50,7 +50,7 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
                   <Badge variant="outline" className="text-xs hidden sm:flex">
                     {getCategoryLabelByWorkspace(workspace, t.category, t.custom_category)}
                   </Badge>
-                  <span className={`text-sm font-semibold ${
+                  <span className={`text-sm font-semibold private ${
                     t.type === 'income' ? 'text-emerald-600' : 'text-red-500'
                   }`}>
                     {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}

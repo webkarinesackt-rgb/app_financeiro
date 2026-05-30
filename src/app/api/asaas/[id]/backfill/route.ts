@@ -113,7 +113,7 @@ export async function POST(
       const fee = p.value - netValue
       const txDate = p.paymentDate ?? p.clientPaymentDate ?? p.dateCreated
       const fullDesc = buildDescription(customerName, p.description)
-      const { category, custom_category } = categorizeAsaas(fullDesc)
+      const { category, custom_category } = categorizeAsaas()
 
       batch.push({
         user_id: integration.user_id,
@@ -168,6 +168,6 @@ function mapBillingType(t: AsaasPayment['billingType']): string | null {
 // Asaas é o gateway dos clientes de serviço — tudo cai em
 // "Receita Landing Page / Site". Subdivisão por tipo de projeto
 // (subcategory) é feita manualmente em /transactions depois.
-function categorizeAsaas(_description: string): { category: 'custom'; custom_category: string } {
+function categorizeAsaas(): { category: 'custom'; custom_category: string } {
   return { category: 'custom', custom_category: 'Receita Landing Page / Site' }
 }

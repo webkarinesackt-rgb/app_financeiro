@@ -11,7 +11,7 @@ import {
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
-import { MoreVertical, Pencil, Trash2, TrendingUp, TrendingDown, RefreshCw, Wallet, CreditCard as CardIcon, CheckSquare, Square } from 'lucide-react'
+import { MoreVertical, Pencil, Trash2, TrendingUp, TrendingDown, RefreshCw, CheckSquare, Square } from 'lucide-react'
 import { toast } from 'sonner'
 import { deleteTransaction, deleteTransactions, categorizeTransactions } from '@/lib/transactions'
 import { formatCurrency, formatDate } from '@/lib/format'
@@ -254,7 +254,7 @@ export function TransactionList({ transactions, accounts = [], cards = [], onRef
 
                   {/* Amount + actions */}
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className={`text-sm font-bold ${t.type === 'income' ? 'text-emerald-600' : 'text-red-500'}`}>
+                    <span className={`text-sm font-bold private ${t.type === 'income' ? 'text-emerald-600' : 'text-red-500'}`}>
                       {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
                     </span>
 

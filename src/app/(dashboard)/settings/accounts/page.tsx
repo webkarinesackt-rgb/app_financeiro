@@ -73,7 +73,7 @@ export default function AccountsPage() {
           <CardContent className="py-3 px-4">
             <div className="flex items-center justify-between">
               <span className="text-sm text-slate-600">Saldo geral (contas incluídas)</span>
-              <span className={`text-base font-bold ${totalBalance >= 0 ? 'text-emerald-700' : 'text-red-500'}`}>
+              <span className={`text-base font-bold private ${totalBalance >= 0 ? 'text-emerald-700' : 'text-red-500'}`}>
                 {formatCurrency(totalBalance)}
               </span>
             </div>
@@ -129,7 +129,7 @@ export default function AccountsPage() {
 
                   {/* Balance */}
                   <div className="text-right shrink-0 mr-2">
-                    <p className={`text-sm font-bold ${acc.currentBalance >= 0 ? 'text-slate-700' : 'text-red-500'}`}>
+                    <p className={`text-sm font-bold private ${acc.currentBalance >= 0 ? 'text-slate-700' : 'text-red-500'}`}>
                       {formatCurrency(acc.currentBalance)}
                     </p>
                     {acc.initial_balance !== 0 && (

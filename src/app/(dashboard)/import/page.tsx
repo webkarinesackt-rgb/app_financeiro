@@ -13,7 +13,7 @@ import { getCreditCards } from '@/lib/credit-cards'
 import { formatCurrency } from '@/lib/format'
 import { parseBankCsv } from '@/lib/bank-csv'
 import type { CreditCard } from '@/types'
-import { CATEGORY_LABELS, PAYMENT_METHOD_LABELS, getCategoryLabelByWorkspace } from '@/types'
+import { PAYMENT_METHOD_LABELS, getCategoryLabelByWorkspace } from '@/types'
 import type { Account, Category, PaymentMethod } from '@/types'
 import { useWorkspace } from '@/hooks/use-workspace'
 

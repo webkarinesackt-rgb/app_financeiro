@@ -292,7 +292,7 @@ export function PanoramaClient() {
                   </div>
                   <Link href="/previsao" className="text-xs text-emerald-700 hover:underline">Ver →</Link>
                 </div>
-                <p className="display-num text-2xl sm:text-3xl text-emerald-800 break-words">{formatCurrency(mrr)} <span className="text-xs font-normal text-stone-500 ml-1 not-italic">/ mês</span></p>
+                <p className="display-num text-2xl sm:text-3xl text-emerald-800 break-words private">{formatCurrency(mrr)} <span className="text-xs font-normal text-stone-500 ml-1 not-italic">/ mês</span></p>
                 <p className="text-xs text-slate-500 mt-1">
                   {recurringClients.filter((c) => c.active).length} cliente(s) ativo(s) · ARR projetado {formatCurrency(arr)}
                 </p>
@@ -308,7 +308,7 @@ export function PanoramaClient() {
                   </div>
                   <Link href="/previsao" className="text-xs text-red-700 hover:underline">Ver →</Link>
                 </div>
-                <p className="display-num text-2xl sm:text-3xl text-red-800 break-words">{formatCurrency(monthlyFixedCosts)} <span className="text-xs font-normal text-stone-500 ml-1 not-italic">/ mês</span></p>
+                <p className="display-num text-2xl sm:text-3xl text-red-800 break-words private">{formatCurrency(monthlyFixedCosts)} <span className="text-xs font-normal text-stone-500 ml-1 not-italic">/ mês</span></p>
                 <p className="text-xs text-slate-500 mt-1">
                   Equipe + Ferramentas + Infra · projeção anual {formatCurrency(monthlyFixedCosts * 12)}
                 </p>
@@ -539,7 +539,7 @@ function KPICard({ label, value, delta, prevLabel, prevValue, color, icon, inver
           <span className={`text-xs ${p.text} font-medium`}>{label}</span>
           <span className={p.text}>{icon}</span>
         </div>
-        <p className={`display-num text-2xl sm:text-3xl ${p.text} break-words tracking-tight`}>{formatCurrency(value)}</p>
+        <p className={`display-num text-2xl sm:text-3xl private ${p.text} break-words tracking-tight`}>{formatCurrency(value)}</p>
         {prevValue > 0 ? (
           <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
             <DeltaIcon className={`h-3 w-3 ${deltaClass}`} />

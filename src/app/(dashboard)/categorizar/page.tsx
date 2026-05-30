@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Loader2, CheckCircle2, ChevronRight, Undo2, X, Sparkles } from 'lucide-react'
+import { Loader2, CheckCircle2, ChevronRight, Undo2, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   getUncategorizedLPClients, getUncategorizedExpenses,

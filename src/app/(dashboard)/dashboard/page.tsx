@@ -10,7 +10,7 @@ import { formatCurrency } from '@/lib/format'
 import { getCategoryLabelByWorkspace, getBankColor, type AccountWithBalance, type CreditCardWithUsage, type Transaction, type Category } from '@/types'
 import { useWorkspace } from '@/hooks/use-workspace'
 import { usePrivacy } from '@/hooks/use-privacy'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { TransactionForm } from '@/components/transactions/transaction-form'
 import { RecentTransactions } from '@/components/dashboard/recent-transactions'
@@ -67,7 +67,6 @@ export default function DashboardPage() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  const totalIncome = transactions.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0)
   const totalExpenses = transactions.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
   const operationalAccounts = accounts.filter((a) => a.kind !== 'reserve')
   const reserveAccounts = accounts.filter((a) => a.kind === 'reserve')

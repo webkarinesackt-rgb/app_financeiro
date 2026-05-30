@@ -10,7 +10,7 @@ import { getCreditCards } from '@/lib/credit-cards'
 import { getCustomCategories, getUsedBuiltInCategories } from '@/lib/transactions'
 import {
   CATEGORY_LABELS, PERSONAL_CATEGORY_LABELS, getSubcategoryOptions,
-  type Account, type CreditCard, type Category, type PersonalCategory,
+  type Account, type CreditCard,
 } from '@/types'
 import { useWorkspace } from '@/hooks/use-workspace'
 import { X, Wallet, CreditCard as CardIcon } from 'lucide-react'

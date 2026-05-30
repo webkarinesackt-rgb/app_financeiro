@@ -57,7 +57,7 @@ export function ReservasClient() {
             </div>
             <span className="text-sm text-slate-500">Total guardado</span>
           </div>
-          <p className="text-3xl font-bold text-slate-800">{formatCurrency(total)}</p>
+          <p className="text-3xl font-bold text-slate-800 private">{formatCurrency(total)}</p>
           <p className="text-xs text-slate-400 mt-1">
             {reserves.length} reserva(s) ativa(s) · não entra no Saldo Geral
           </p>

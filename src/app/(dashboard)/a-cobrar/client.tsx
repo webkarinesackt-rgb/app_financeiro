@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
-  AlertTriangle, Phone, ChevronRight, CheckCircle2, Clock, Briefcase, Repeat, Loader2,
+  AlertTriangle, Phone, ChevronRight, CheckCircle2, Clock, Briefcase, Repeat,
 } from 'lucide-react'
 import { OverdueList } from '@/components/dashboard/overdue-list'
 import { getACobrarData, whatsappLink, type ACobrarData } from '@/lib/a-cobrar'
@@ -57,7 +57,7 @@ export function ACobrarClient() {
               </div>
               <div className="flex-1">
                 <p className="text-xs text-amber-700 font-medium">Total potencialmente a cobrar</p>
-                <p className="text-2xl font-bold text-amber-900">{formatCurrency(data?.totalPending ?? 0)}</p>
+                <p className="text-2xl font-bold text-amber-900 private">{formatCurrency(data?.totalPending ?? 0)}</p>
               </div>
               <div className="text-right">
                 <p className="text-xs text-amber-700 font-medium">Clientes pendentes</p>
