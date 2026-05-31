@@ -4,28 +4,43 @@ import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { AccountForm } from '@/components/accounts/account-form'
-import { getAccountsWithBalances, deleteAccount } from '@/lib/accounts'
+import { getAllAccountsWithBalances, deleteAccount, moveAccountToWorkspace } from '@/lib/accounts'
 import { formatCurrency } from '@/lib/format'
 import { getBankColor, getBankName, ACCOUNT_TYPE_LABELS, type AccountWithBalance } from '@/types'
-import { Plus, Pencil, Trash2, Wallet } from 'lucide-react'
+import { Plus, Pencil, Trash2, Wallet, ArrowRightLeft } from 'lucide-react'
 import { toast } from 'sonner'
+import { useWorkspace } from '@/hooks/use-workspace'
 
 export default function AccountsPage() {
+  const workspace = useWorkspace()
   const [accounts, setAccounts] = useState<AccountWithBalance[]>([])
   const [loading, setLoading] = useState(true)
   const [formOpen, setFormOpen] = useState(false)
   const [editAccount, setEditAccount] = useState<AccountWithBalance | undefined>()
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [moving, setMoving] = useState<string | null>(null)
 
   const fetchAccounts = useCallback(async () => {
     setLoading(true)
     try {
-      const data = await getAccountsWithBalances()
+      const data = await getAllAccountsWithBalances()
       setAccounts(data)
     } finally {
       setLoading(false)
     }
   }, [])
+
+  async function handleMove(id: string, target: 'business' | 'personal') {
+    setMoving(id)
+    const ok = await moveAccountToWorkspace(id, target)
+    if (ok) {
+      toast.success(`Conta movida para ${target === 'business' ? 'Fysi' : 'PF'}`)
+      fetchAccounts()
+    } else {
+      toast.error('Não foi possível mover (cache PostgREST stale). Pause/restaure o projeto no Supabase.')
+    }
+    setMoving(null)
+  }
 
   useEffect(() => { fetchAccounts() }, [fetchAccounts])
 
@@ -53,7 +68,9 @@ export default function AccountsPage() {
     }
   }
 
-  const totalBalance = accounts.filter((a) => a.include_in_total).reduce((s, a) => s + a.currentBalance, 0)
+  const currentWsAccounts = accounts.filter((a) => (a.workspace ?? 'business') === workspace)
+  const wrongWsAccounts = accounts.filter((a) => (a.workspace ?? 'business') !== workspace)
+  const totalBalance = currentWsAccounts.filter((a) => a.include_in_total).reduce((s, a) => s + a.currentBalance, 0)
 
   return (
     <div className="space-y-4">
@@ -68,7 +85,7 @@ export default function AccountsPage() {
       </div>
 
       {/* Saldo total */}
-      {accounts.length > 0 && (
+      {currentWsAccounts.length > 0 && (
         <Card className="border border-emerald-100 bg-emerald-50/50 shadow-none">
           <CardContent className="py-3 px-4">
             <div className="flex items-center justify-between">
@@ -77,6 +94,17 @@ export default function AccountsPage() {
                 {formatCurrency(totalBalance)}
               </span>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Aviso de contas no workspace errado */}
+      {wrongWsAccounts.length > 0 && (
+        <Card className="border border-amber-200 bg-amber-50 shadow-none">
+          <CardContent className="py-3 px-4 text-xs text-amber-800">
+            <strong>{wrongWsAccounts.length} conta(s)</strong> em outro workspace abaixo.
+            Use o botão <ArrowRightLeft className="h-3 w-3 inline" /> pra trazer pro workspace
+            atual ({workspace === 'personal' ? 'PF' : 'Fysi'}).
           </CardContent>
         </Card>
       )}
@@ -114,8 +142,21 @@ export default function AccountsPage() {
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-sm font-semibold text-slate-800 truncate">{acc.name}</p>
+                      {(() => {
+                        const ws = (acc.workspace ?? 'business') as 'business' | 'personal'
+                        const wrongWs = ws !== workspace
+                        return (
+                          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0 ${
+                            ws === 'personal'
+                              ? 'bg-violet-100 text-violet-700'
+                              : 'bg-emerald-100 text-emerald-700'
+                          } ${wrongWs ? 'ring-1 ring-amber-400' : ''}`}>
+                            {ws === 'personal' ? 'PF' : 'Fysi'}
+                          </span>
+                        )
+                      })()}
                       {!acc.include_in_total && (
                         <span className="text-xs bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded shrink-0">
                           excluída do total
@@ -139,6 +180,21 @@ export default function AccountsPage() {
 
                   {/* Actions */}
                   <div className="flex gap-1 shrink-0">
+                    {(() => {
+                      const ws = (acc.workspace ?? 'business') as 'business' | 'personal'
+                      const target = ws === 'business' ? 'personal' : 'business'
+                      const wrongWs = ws !== workspace
+                      return wrongWs ? (
+                        <button
+                          onClick={() => handleMove(acc.id, target)}
+                          disabled={moving === acc.id}
+                          title={`Mover para ${target === 'personal' ? 'PF' : 'Fysi'}`}
+                          className="p-1.5 rounded-lg text-amber-600 hover:text-amber-700 hover:bg-amber-50 transition-colors disabled:opacity-50"
+                        >
+                          <ArrowRightLeft className="h-3.5 w-3.5" />
+                        </button>
+                      ) : null
+                    })()}
                     <button
                       onClick={() => openEdit(acc)}
                       className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"

@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { createAccount, updateAccount } from '@/lib/accounts'
+import { createAccount, updateAccount, AccountStuckInWrongWorkspaceError } from '@/lib/accounts'
 import { parseBRLAmount } from '@/lib/format'
 import { ACCOUNT_TYPE_LABELS, BANKS, type Account, type AccountKind, type AccountType } from '@/types'
 
@@ -60,6 +60,13 @@ export function AccountForm({ open, onClose, onSuccess, account, defaultKind }: 
       onSuccess()
       onClose()
     } catch (err: unknown) {
+      // Erro especial: conta criada mas no workspace errado por cache stale
+      if (err instanceof AccountStuckInWrongWorkspaceError) {
+        toast.warning(err.message, { duration: 12000 })
+        onSuccess()  // re-fetch pra mostrar a conta (vai aparecer no banner amarelo)
+        onClose()
+        return
+      }
       const msg = err && typeof err === 'object' && 'message' in err
         ? String((err as { message: unknown }).message)
         : String(err)

@@ -45,6 +45,34 @@ export async function getAccountsWithBalances(): Promise<AccountWithBalance[]> {
   })
 }
 
+// Retorna TODAS as contas (sem filtro de workspace) — usado em telas de
+// gerenciamento (settings) pra que contas no workspace "errado" (criadas com
+// cache PostgREST stale) fiquem visíveis e migráveis.
+export async function getAllAccountsWithBalances(): Promise<AccountWithBalance[]> {
+  const supabase = createClient()
+  const [{ data: accountsRaw }, { data: transactionsRaw }] = await Promise.all([
+    supabase.from('accounts').select('*').order('created_at', { ascending: true }),
+    supabase.from('transactions').select('account_id, type, amount').not('account_id', 'is', null),
+  ])
+  const accounts = accountsRaw ?? []
+  const transactions = transactionsRaw ?? []
+  return accounts.map((account) => {
+    const txs = transactions.filter((t) => t.account_id === account.id)
+    const income = txs.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0)
+    const expense = txs.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
+    return { ...account, currentBalance: account.initial_balance + income - expense }
+  })
+}
+
+// Move conta pra outro workspace. Pode falhar silencioso se a coluna workspace
+// não estiver no cache do PostgREST — nesse caso retorna false e o caller decide
+// se mostra aviso.
+export async function moveAccountToWorkspace(id: string, workspace: 'business' | 'personal'): Promise<boolean> {
+  const supabase = createClient()
+  const { error } = await supabase.from('accounts').update({ workspace }).eq('id', id)
+  return !error
+}
+
 export async function getReserveAccountsWithBalances(): Promise<AccountWithBalance[]> {
   const all = await getAccountsWithBalances()
   return all.filter((a) => a.kind === 'reserve')
@@ -96,11 +124,34 @@ export async function createAccount(data: AccountInput): Promise<Account> {
   if (workspace !== 'business') {
     const upd = await supabase.from('accounts').update({ workspace }).eq('id', insBare.data.id)
     if (upd.error) {
-      // Avisa mas não falha — a conta existe, só está no workspace errado.
-      console.warn('[accounts] workspace UPDATE falhou:', upd.error.message)
+      // Conta criada mas no workspace errado (cache PostgREST stale). Joga erro
+      // específico pro caller mostrar instrução.
+      throw new AccountStuckInWrongWorkspaceError(
+        insBare.data as Account,
+        workspace,
+        upd.error.message,
+      )
     }
+    // Re-fetch pra retornar workspace atualizado
+    const { data: refreshed } = await supabase.from('accounts').select('*').eq('id', insBare.data.id).single()
+    return (refreshed ?? insBare.data) as Account
   }
   return insBare.data as Account
+}
+
+export class AccountStuckInWrongWorkspaceError extends Error {
+  constructor(
+    public account: Account,
+    public requestedWorkspace: string,
+    public underlyingMessage: string,
+  ) {
+    super(
+      `Conta "${account.name}" foi criada mas ficou no workspace "business" (cache do PostgREST está desatualizado). ` +
+      `Vá em Settings → Contas e clique em "Mover" pra trazê-la pro workspace ${requestedWorkspace}, ` +
+      `ou pause/restaure o projeto no Supabase pra resolver de vez.`,
+    )
+    this.name = 'AccountStuckInWrongWorkspaceError'
+  }
 }
 
 export async function updateAccount(id: string, data: Partial<AccountInput>): Promise<Account> {

@@ -15,6 +15,24 @@ export async function getCreditCards(): Promise<CreditCard[]> {
   return filterByWorkspace(data, workspace)
 }
 
+// Retorna TODOS os cartões (sem filtro de workspace) — usado em telas de
+// gerenciamento pra deixar cartões "presos" em workspace errado visíveis.
+export async function getAllCreditCards(): Promise<CreditCard[]> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('credit_cards')
+    .select('*')
+    .order('created_at', { ascending: true })
+  if (error) throw error
+  return (data ?? []) as CreditCard[]
+}
+
+export async function moveCardToWorkspace(id: string, workspace: 'business' | 'personal'): Promise<boolean> {
+  const supabase = createClient()
+  const { error } = await supabase.from('credit_cards').update({ workspace }).eq('id', id)
+  return !error
+}
+
 export async function getCreditCardsWithUsage(month: number, year: number): Promise<CreditCardWithUsage[]> {
   const supabase = createClient()
   const workspace = getClientWorkspace()
@@ -81,9 +99,27 @@ export async function createCreditCard(data: CardInput): Promise<CreditCard> {
   }
   if (workspace !== 'business') {
     const upd = await supabase.from('credit_cards').update({ workspace }).eq('id', insBare.data.id)
-    if (upd.error) console.warn('[credit-cards] workspace UPDATE falhou:', upd.error.message)
+    if (upd.error) {
+      throw new CreditCardStuckInWrongWorkspaceError(insBare.data as CreditCard, workspace, upd.error.message)
+    }
+    const { data: refreshed } = await supabase.from('credit_cards').select('*').eq('id', insBare.data.id).single()
+    return (refreshed ?? insBare.data) as CreditCard
   }
   return insBare.data as CreditCard
+}
+
+export class CreditCardStuckInWrongWorkspaceError extends Error {
+  constructor(
+    public card: CreditCard,
+    public requestedWorkspace: string,
+    public underlyingMessage: string,
+  ) {
+    super(
+      `Cartão "${card.name}" foi criado mas ficou no workspace "business" (cache PostgREST stale). ` +
+      `Vá em Settings → Cartões e clique em "Mover" pra trazê-lo pro workspace ${requestedWorkspace}.`,
+    )
+    this.name = 'CreditCardStuckInWrongWorkspaceError'
+  }
 }
 
 export async function updateCreditCard(id: string, data: Partial<CardInput>): Promise<CreditCard> {

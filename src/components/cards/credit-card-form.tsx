@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Loader2, CreditCard as CardIcon } from 'lucide-react'
 import { toast } from 'sonner'
-import { createCreditCard, updateCreditCard } from '@/lib/credit-cards'
+import { createCreditCard, updateCreditCard, CreditCardStuckInWrongWorkspaceError } from '@/lib/credit-cards'
 import { parseBRLAmount } from '@/lib/format'
 import { BANKS, type CreditCard } from '@/types'
 
@@ -56,6 +56,12 @@ export function CreditCardForm({ open, onClose, onSuccess, card }: CreditCardFor
       onSuccess()
       onClose()
     } catch (err: unknown) {
+      if (err instanceof CreditCardStuckInWrongWorkspaceError) {
+        toast.warning(err.message, { duration: 12000 })
+        onSuccess()
+        onClose()
+        return
+      }
       const msg = err && typeof err === 'object' && 'message' in err
         ? String((err as { message: unknown }).message)
         : String(err)

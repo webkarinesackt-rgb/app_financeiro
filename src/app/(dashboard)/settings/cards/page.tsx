@@ -4,28 +4,43 @@ import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { CreditCardForm } from '@/components/cards/credit-card-form'
-import { getCreditCards, deleteCreditCard } from '@/lib/credit-cards'
+import { getAllCreditCards, deleteCreditCard, moveCardToWorkspace } from '@/lib/credit-cards'
 import { formatCurrency } from '@/lib/format'
 import { getBankName, type CreditCard } from '@/types'
-import { Plus, Pencil, Trash2, CreditCard as CardIcon } from 'lucide-react'
+import { Plus, Pencil, Trash2, CreditCard as CardIcon, ArrowRightLeft } from 'lucide-react'
 import { toast } from 'sonner'
+import { useWorkspace } from '@/hooks/use-workspace'
 
 export default function CardsPage() {
+  const workspace = useWorkspace()
   const [cards, setCards] = useState<CreditCard[]>([])
   const [loading, setLoading] = useState(true)
   const [formOpen, setFormOpen] = useState(false)
   const [editCard, setEditCard] = useState<CreditCard | undefined>()
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [moving, setMoving] = useState<string | null>(null)
 
   const fetchCards = useCallback(async () => {
     setLoading(true)
     try {
-      const data = await getCreditCards()
+      const data = await getAllCreditCards()
       setCards(data)
     } finally {
       setLoading(false)
     }
   }, [])
+
+  async function handleMove(id: string, target: 'business' | 'personal') {
+    setMoving(id)
+    const ok = await moveCardToWorkspace(id, target)
+    if (ok) {
+      toast.success(`Cartão movido para ${target === 'business' ? 'Fysi' : 'PF'}`)
+      fetchCards()
+    } else {
+      toast.error('Não foi possível mover (cache PostgREST stale).')
+    }
+    setMoving(null)
+  }
 
   useEffect(() => { fetchCards() }, [fetchCards])
 
@@ -53,7 +68,9 @@ export default function CardsPage() {
     }
   }
 
-  const totalLimit = cards.reduce((s, c) => s + c.credit_limit, 0)
+  const currentWsCards = cards.filter((c) => (c.workspace ?? 'business') === workspace)
+  const wrongWsCards = cards.filter((c) => (c.workspace ?? 'business') !== workspace)
+  const totalLimit = currentWsCards.reduce((s, c) => s + c.credit_limit, 0)
 
   return (
     <div className="space-y-4">
@@ -68,13 +85,22 @@ export default function CardsPage() {
       </div>
 
       {/* Total limit summary */}
-      {cards.length > 0 && totalLimit > 0 && (
+      {currentWsCards.length > 0 && totalLimit > 0 && (
         <Card className="border border-blue-100 bg-blue-50/50 shadow-none">
           <CardContent className="py-3 px-4">
             <div className="flex items-center justify-between">
               <span className="text-sm text-slate-600">Limite total disponível</span>
               <span className="text-base font-bold text-blue-700 private">{formatCurrency(totalLimit)}</span>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {wrongWsCards.length > 0 && (
+        <Card className="border border-amber-200 bg-amber-50 shadow-none">
+          <CardContent className="py-3 px-4 text-xs text-amber-800">
+            <strong>{wrongWsCards.length} cartão(ões)</strong> em outro workspace abaixo.
+            Use o botão <ArrowRightLeft className="h-3 w-3 inline" /> pra trazer pro workspace atual.
           </CardContent>
         </Card>
       )}
@@ -112,7 +138,20 @@ export default function CardsPage() {
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-800 truncate">{card.name}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-semibold text-slate-800 truncate">{card.name}</p>
+                      {(() => {
+                        const ws = (card.workspace ?? 'business') as 'business' | 'personal'
+                        const wrongWs = ws !== workspace
+                        return (
+                          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0 ${
+                            ws === 'personal' ? 'bg-violet-100 text-violet-700' : 'bg-emerald-100 text-emerald-700'
+                          } ${wrongWs ? 'ring-1 ring-amber-400' : ''}`}>
+                            {ws === 'personal' ? 'PF' : 'Fysi'}
+                          </span>
+                        )
+                      })()}
+                    </div>
                     <div className="flex items-center gap-2 mt-0.5">
                       {card.bank && (
                         <span className="text-xs text-slate-400">{getBankName(card.bank)}</span>
@@ -136,6 +175,21 @@ export default function CardsPage() {
 
                   {/* Actions */}
                   <div className="flex gap-1 shrink-0">
+                    {(() => {
+                      const ws = (card.workspace ?? 'business') as 'business' | 'personal'
+                      const target = ws === 'business' ? 'personal' : 'business'
+                      const wrongWs = ws !== workspace
+                      return wrongWs ? (
+                        <button
+                          onClick={() => handleMove(card.id, target)}
+                          disabled={moving === card.id}
+                          title={`Mover para ${target === 'personal' ? 'PF' : 'Fysi'}`}
+                          className="p-1.5 rounded-lg text-amber-600 hover:text-amber-700 hover:bg-amber-50 transition-colors disabled:opacity-50"
+                        >
+                          <ArrowRightLeft className="h-3.5 w-3.5" />
+                        </button>
+                      ) : null
+                    })()}
                     <button
                       onClick={() => openEdit(card)}
                       className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
