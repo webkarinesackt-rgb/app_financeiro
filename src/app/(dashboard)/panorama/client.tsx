@@ -63,6 +63,8 @@ export function PanoramaClient() {
   const [loading, setLoading] = useState(true)
   const [monthsBack, setMonthsBack] = useState<6 | 12>(6)
   const [showEvolution, setShowEvolution] = useState(true)
+  const [showIncomeBreakdown, setShowIncomeBreakdown] = useState(true)
+  const [showExpenseBreakdown, setShowExpenseBreakdown] = useState(true)
   const [trend, setTrend] = useState<{ name: string; receita: number; despesa: number; lucro: number }[]>([])
 
   const prevMonth = month === 1 ? 12 : month - 1
@@ -391,8 +393,17 @@ export function PanoramaClient() {
             {/* Receita por tipo */}
             <Card className="border border-slate-100 shadow-sm">
               <CardContent className="p-5">
-                <h2 className="text-sm font-semibold text-slate-700 mb-3">Receita por tipo de projeto</h2>
-                {incomeBreakdown.length === 0 ? (
+                <div className="flex items-center gap-2 mb-3">
+                  <h2 className="text-sm font-semibold text-slate-700">Receita por tipo de projeto</h2>
+                  <button
+                    onClick={() => setShowIncomeBreakdown(!showIncomeBreakdown)}
+                    title={showIncomeBreakdown ? 'Ocultar' : 'Mostrar'}
+                    className="h-6 w-6 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors print:hidden"
+                  >
+                    {showIncomeBreakdown ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
+                {showIncomeBreakdown && (incomeBreakdown.length === 0 ? (
                   <p className="text-sm text-slate-400 py-6 text-center">Sem dados no período</p>
                 ) : (
                   <div className="flex items-center gap-4">
@@ -418,15 +429,24 @@ export function PanoramaClient() {
                       {incomeBreakdown.length > 6 && <p className="text-xs text-slate-400">+{incomeBreakdown.length - 6} outros</p>}
                     </div>
                   </div>
-                )}
+                ))}
               </CardContent>
             </Card>
 
             {/* Despesa por categoria */}
             <Card className="border border-slate-100 shadow-sm">
               <CardContent className="p-5">
-                <h2 className="text-sm font-semibold text-slate-700 mb-3">Despesa por categoria</h2>
-                {expenseBreakdown.length === 0 ? (
+                <div className="flex items-center gap-2 mb-3">
+                  <h2 className="text-sm font-semibold text-slate-700">Despesa por categoria</h2>
+                  <button
+                    onClick={() => setShowExpenseBreakdown(!showExpenseBreakdown)}
+                    title={showExpenseBreakdown ? 'Ocultar' : 'Mostrar'}
+                    className="h-6 w-6 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors print:hidden"
+                  >
+                    {showExpenseBreakdown ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
+                {showExpenseBreakdown && (expenseBreakdown.length === 0 ? (
                   <p className="text-sm text-slate-400 py-6 text-center">Sem dados no período</p>
                 ) : (
                   <div className="flex items-center gap-4">
@@ -452,7 +472,7 @@ export function PanoramaClient() {
                       {expenseBreakdown.length > 6 && <p className="text-xs text-slate-400">+{expenseBreakdown.length - 6} outras</p>}
                     </div>
                   </div>
-                )}
+                ))}
               </CardContent>
             </Card>
           </div>
