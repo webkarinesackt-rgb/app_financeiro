@@ -17,6 +17,8 @@ export interface PendingClosing {
   daysSinceClose: number
   matchedPayment: boolean
   matchedDescription: string | null
+  /** True quando o usuário marcou explicitamente "a cobrar" no fechamento. */
+  manuallyMarked?: boolean
 }
 
 export interface ACobrarData {
@@ -83,7 +85,9 @@ export async function getACobrarData(): Promise<ACobrarData> {
     { data: transactions },
   ] = await Promise.all([
     supabase.from('recurring_clients').select('*').eq('active', true),
-    supabase.from('projects').select('*').not('status', 'in', '(cancelled,paid)'),
+    // Pega não-cancelados/pagos OU os explicitamente marcados como "a cobrar"
+    // (que podem estar em qualquer status — em produção, entregue, etc.).
+    supabase.from('projects').select('*').or('status.not.in.(cancelled,paid),mark_to_collect.eq.true'),
     supabase.from('transactions').select('id, description, amount, date, type, workspace')
       .eq('type', 'income')
       .gte('date', cutoffStr),
@@ -129,6 +133,7 @@ export async function getACobrarData(): Promise<ACobrarData> {
       daysSinceClose: daysBetween(p.start_date),
       matchedPayment: !!match,
       matchedDescription: match?.description ?? null,
+      manuallyMarked: !!p.mark_to_collect,
     })
   }
 

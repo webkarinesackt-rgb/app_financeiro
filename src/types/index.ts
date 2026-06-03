@@ -140,6 +140,7 @@ export interface Closing {
   start_date: string
   status: ClosingStatus
   notes: string | null
+  mark_to_collect?: boolean
   created_at: string
   updated_at: string
 }

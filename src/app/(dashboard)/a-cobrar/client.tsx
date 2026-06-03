@@ -35,7 +35,8 @@ export function ACobrarClient() {
   useEffect(() => { fetchData() }, [fetchData])
 
   const recurringCount = data?.recurring.length ?? 0
-  const closingsPending = data?.closings.filter((c) => !c.matchedPayment) ?? []
+  // Inclui fechamentos sem pagamento detectado OU explicitamente marcados pelo user
+  const closingsPending = data?.closings.filter((c) => !c.matchedPayment || c.manuallyMarked) ?? []
   const closingsCount = closingsPending.length
 
   return (

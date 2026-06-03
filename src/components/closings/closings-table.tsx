@@ -4,10 +4,10 @@ import { useState } from 'react'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { MoreVertical, Pencil, Trash2, MessageCircle } from 'lucide-react'
+import { MoreVertical, Pencil, Trash2, MessageCircle, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { ClosingForm } from './closing-form'
-import { deleteClosing } from '@/lib/closings'
+import { deleteClosing, setMarkToCollect } from '@/lib/closings'
 import { formatCurrency } from '@/lib/format'
 import { CLOSING_STATUS_LABELS, CLOSING_STATUS_COLORS, type Closing } from '@/types'
 
@@ -38,6 +38,17 @@ export function ClosingsTable({ closings, onRefresh }: ClosingsTableProps) {
       onRefresh()
     } catch {
       toast.error('Erro ao excluir')
+    }
+  }
+
+  async function handleToggleCollect(c: Closing) {
+    const next = !c.mark_to_collect
+    try {
+      await setMarkToCollect(c.id, next)
+      toast.success(next ? 'Marcado como "a cobrar"' : 'Desmarcado')
+      onRefresh()
+    } catch (e) {
+      toast.error('Erro ao atualizar', { description: (e as Error).message })
     }
   }
 
@@ -85,15 +96,22 @@ export function ClosingsTable({ closings, onRefresh }: ClosingsTableProps) {
                     <td className="px-4 py-2.5 text-slate-600">{c.market ?? '—'}</td>
                     <td className="px-4 py-2.5 text-slate-600">{c.segment ?? '—'}</td>
                     <td className="px-4 py-2.5">
-                      <span
-                        className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-                        style={{
-                          backgroundColor: `${CLOSING_STATUS_COLORS[c.status]}1A`,
-                          color: CLOSING_STATUS_COLORS[c.status],
-                        }}
-                      >
-                        {CLOSING_STATUS_LABELS[c.status]}
-                      </span>
+                      <div className="inline-flex flex-wrap items-center gap-1">
+                        <span
+                          className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                          style={{
+                            backgroundColor: `${CLOSING_STATUS_COLORS[c.status]}1A`,
+                            color: CLOSING_STATUS_COLORS[c.status],
+                          }}
+                        >
+                          {CLOSING_STATUS_LABELS[c.status]}
+                        </span>
+                        {c.mark_to_collect && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-100 text-amber-700">
+                            <AlertCircle className="h-3 w-3" /> A cobrar
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-2.5">
                       {wa ? (
@@ -112,6 +130,10 @@ export function ClosingsTable({ closings, onRefresh }: ClosingsTableProps) {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => setEditing(c)}>
                             <Pencil className="h-3.5 w-3.5 mr-2" /> Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleToggleCollect(c)}>
+                            <AlertCircle className={`h-3.5 w-3.5 mr-2 ${c.mark_to_collect ? 'text-amber-600' : ''}`} />
+                            {c.mark_to_collect ? 'Desmarcar "a cobrar"' : 'Marcar como "a cobrar"'}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => handleDelete(c)}
@@ -153,6 +175,10 @@ export function ClosingsTable({ closings, onRefresh }: ClosingsTableProps) {
                       <DropdownMenuItem onClick={() => setEditing(c)}>
                         <Pencil className="h-3.5 w-3.5 mr-2" /> Editar
                       </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleToggleCollect(c)}>
+                        <AlertCircle className={`h-3.5 w-3.5 mr-2 ${c.mark_to_collect ? 'text-amber-600' : ''}`} />
+                        {c.mark_to_collect ? 'Desmarcar "a cobrar"' : 'Marcar como "a cobrar"'}
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleDelete(c)} className="text-red-600 focus:text-red-600">
                         <Trash2 className="h-3.5 w-3.5 mr-2" /> Excluir
                       </DropdownMenuItem>
@@ -171,6 +197,11 @@ export function ClosingsTable({ closings, onRefresh }: ClosingsTableProps) {
                 >
                   {CLOSING_STATUS_LABELS[c.status]}
                 </span>
+                {c.mark_to_collect && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-100 text-amber-700">
+                    <AlertCircle className="h-3 w-3" /> A cobrar
+                  </span>
+                )}
                 {c.channel && <span className="inline-flex px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-600">{c.channel}</span>}
                 {c.market && <span className="inline-flex px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-600">{c.market}</span>}
                 {c.segment && <span className="inline-flex px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-600">{c.segment}</span>}

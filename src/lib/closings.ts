@@ -3,7 +3,7 @@ import type { Closing, ClosingFormData } from '@/types'
 
 const ROW = `id, user_id, name, client_name, project_kind, total_value,
   channel, market, business_model, segment, whatsapp,
-  start_date, status, notes, created_at, updated_at`
+  start_date, status, notes, mark_to_collect, created_at, updated_at`
 
 function toRow(data: ClosingFormData) {
   return {
@@ -77,5 +77,16 @@ export async function updateClosing(id: string, data: ClosingFormData): Promise<
 export async function deleteClosing(id: string): Promise<void> {
   const supabase = createClient()
   const { error } = await supabase.from('projects').delete().eq('id', id)
+  if (error) throw error
+}
+
+// Liga/desliga a flag "a cobrar" — quando true, o fechamento aparece
+// explicitamente em /a-cobrar mesmo sem pagamento detectado.
+export async function setMarkToCollect(id: string, mark: boolean): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('projects')
+    .update({ mark_to_collect: mark, updated_at: new Date().toISOString() })
+    .eq('id', id)
   if (error) throw error
 }
