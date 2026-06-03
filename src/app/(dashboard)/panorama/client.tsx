@@ -11,6 +11,7 @@ import {
 import {
   TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
   Wallet, Target, Repeat, Briefcase, AlertCircle, ChevronRight, Printer,
+  ChevronLeft,
 } from 'lucide-react'
 import { getTransactions } from '@/lib/transactions'
 import { getRecurringClients, sumMonthlyRecurringRevenue } from '@/lib/recurring-clients'
@@ -38,8 +39,23 @@ function expenseColor(name: string): string {
   return CUSTOM_EXPENSE_COLORS[name] ?? CATEGORY_COLORS[name as Category] ?? '#94a3b8'
 }
 
+type PeriodMode = 'month' | 'year' | 'custom'
+
+function pad(n: number): string {
+  return String(n).padStart(2, '0')
+}
+
 export function PanoramaClient() {
-  const [period, setPeriod] = useState<'month' | 'year'>('month')
+  const now = new Date()
+  const [period, setPeriod] = useState<PeriodMode>('month')
+  const [month, setMonth] = useState(now.getMonth() + 1)
+  const [year, setYear] = useState(now.getFullYear())
+  // Range custom — 'YYYY-MM'. Default = mês atual.
+  const [customFrom, setCustomFrom] = useState(`${now.getFullYear()}-${pad(now.getMonth() + 1)}`)
+  const [customTo, setCustomTo] = useState(`${now.getFullYear()}-${pad(now.getMonth() + 1)}`)
+  // Comparação só quando o usuário pedir.
+  const [comparing, setComparing] = useState(false)
+
   const [currentTx, setCurrentTx] = useState<Transaction[]>([])
   const [prevTx, setPrevTx] = useState<Transaction[]>([])
   const [recurringClients, setRecurringClients] = useState<RecurringClient[]>([])
@@ -48,45 +64,63 @@ export function PanoramaClient() {
   const [monthsBack, setMonthsBack] = useState<6 | 12>(6)
   const [trend, setTrend] = useState<{ name: string; receita: number; despesa: number; lucro: number }[]>([])
 
-  const now = new Date()
-  const month = now.getMonth() + 1
-  const year = now.getFullYear()
   const prevMonth = month === 1 ? 12 : month - 1
   const prevYear = month === 1 ? year - 1 : year
 
+  function shiftMonth(delta: number) {
+    let m = month + delta
+    let y = year
+    while (m < 1) { m += 12; y-- }
+    while (m > 12) { m -= 12; y++ }
+    setMonth(m); setYear(y)
+  }
+
   const fetchData = useCallback(async () => {
     setLoading(true)
-    // Promise.allSettled so a failure in one fetch (e.g., getFixedCosts hitting
-    // a stale PostgREST schema cache) doesn't blank the whole panorama.
     try {
       if (period === 'month') {
-        const [cur, prev, rc, fc] = await Promise.allSettled([
+        const tasks: Promise<unknown>[] = [
           getTransactions({ month, year }),
-          getTransactions({ month: prevMonth, year: prevYear }),
           getRecurringClients(),
           getFixedCosts(),
-        ])
-        if (cur.status === 'fulfilled') setCurrentTx(cur.value)
-        if (prev.status === 'fulfilled') setPrevTx(prev.value)
-        if (rc.status === 'fulfilled') setRecurringClients(rc.value)
-        if (fc.status === 'fulfilled') setFixedCosts(fc.value)
-      } else {
+        ]
+        if (comparing) tasks.push(getTransactions({ month: prevMonth, year: prevYear }))
+        const results = await Promise.allSettled(tasks)
+        if (results[0].status === 'fulfilled') setCurrentTx(results[0].value as Transaction[])
+        if (results[1].status === 'fulfilled') setRecurringClients(results[1].value as RecurringClient[])
+        if (results[2].status === 'fulfilled') setFixedCosts(results[2].value as FixedCost[])
+        if (comparing && results[3]?.status === 'fulfilled') setPrevTx(results[3].value as Transaction[])
+        else setPrevTx([])
+      } else if (period === 'year') {
         const ytdMonths = getYearToDateMonths(month)
-        const [curResults, prevResults, rc, fc] = await Promise.allSettled([
+        const tasks: Promise<unknown>[] = [
           Promise.all(ytdMonths.map((m) => getTransactions({ month: m, year }))),
-          Promise.all(ytdMonths.map((m) => getTransactions({ month: m, year: year - 1 }))),
+          getRecurringClients(),
+          getFixedCosts(),
+        ]
+        if (comparing) tasks.push(Promise.all(ytdMonths.map((m) => getTransactions({ month: m, year: year - 1 }))))
+        const results = await Promise.allSettled(tasks)
+        if (results[0].status === 'fulfilled') setCurrentTx((results[0].value as Transaction[][]).flat())
+        if (results[1].status === 'fulfilled') setRecurringClients(results[1].value as RecurringClient[])
+        if (results[2].status === 'fulfilled') setFixedCosts(results[2].value as FixedCost[])
+        if (comparing && results[3]?.status === 'fulfilled') setPrevTx((results[3].value as Transaction[][]).flat())
+        else setPrevTx([])
+      } else {
+        // custom range — from/to em 'YYYY-MM'
+        const [cur, rc, fc] = await Promise.allSettled([
+          getTransactions({ from: customFrom, to: customTo }),
           getRecurringClients(),
           getFixedCosts(),
         ])
-        if (curResults.status === 'fulfilled') setCurrentTx(curResults.value.flat())
-        if (prevResults.status === 'fulfilled') setPrevTx(prevResults.value.flat())
-        if (rc.status === 'fulfilled') setRecurringClients(rc.value)
-        if (fc.status === 'fulfilled') setFixedCosts(fc.value)
+        if (cur.status === 'fulfilled') setCurrentTx(cur.value as Transaction[])
+        if (rc.status === 'fulfilled') setRecurringClients(rc.value as RecurringClient[])
+        if (fc.status === 'fulfilled') setFixedCosts(fc.value as FixedCost[])
+        setPrevTx([])  // sem comparativo em custom por enquanto
       }
     } finally {
       setLoading(false)
     }
-  }, [period, month, year, prevMonth, prevYear])
+  }, [period, month, year, prevMonth, prevYear, customFrom, customTo, comparing])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -197,8 +231,21 @@ export function PanoramaClient() {
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 5)
 
-  const periodLabel = period === 'month' ? `${getMonthName(month)} ${year}` : yearToDateLabel(month, year)
-  const prevPeriodLabel = period === 'month' ? getMonthName(prevMonth) : yearToDateLabel(month, year - 1)
+  function fmtCustom(ym: string): string {
+    const [y, m] = ym.split('-').map(Number)
+    if (!y || !m) return ym
+    return `${getMonthName(m)} ${y}`
+  }
+
+  const periodLabel =
+    period === 'month' ? `${getMonthName(month)} ${year}` :
+    period === 'year'  ? yearToDateLabel(month, year) :
+    customFrom === customTo ? fmtCustom(customFrom) : `${fmtCustom(customFrom)} → ${fmtCustom(customTo)}`
+
+  const prevPeriodLabel =
+    period === 'month' ? getMonthName(prevMonth) :
+    period === 'year'  ? yearToDateLabel(month, year - 1) :
+    ''
 
   return (
     <div className="space-y-5 max-w-5xl">
@@ -213,21 +260,75 @@ export function PanoramaClient() {
           <h1 className="font-display text-4xl sm:text-5xl text-stone-900 tracking-tight leading-none">Panorama</h1>
           <p className="text-stone-500 text-sm mt-2 capitalize italic font-display">{periodLabel}</p>
         </div>
-        <div className="flex items-center gap-2 print:hidden">
-          <div className="inline-flex rounded-lg bg-slate-100 p-0.5 text-xs">
-            <button onClick={() => setPeriod('month')}
-              className={`px-3 py-1 rounded-md font-medium ${period === 'month' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>
-              Este mês
-            </button>
-            <button onClick={() => setPeriod('year')}
-              className={`px-3 py-1 rounded-md font-medium ${period === 'year' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>
-              Este ano
-            </button>
+        <div className="flex flex-col items-end gap-2 print:hidden">
+          <div className="flex items-center gap-2">
+            {/* Mode toggle */}
+            <div className="inline-flex rounded-lg bg-slate-100 p-0.5 text-xs">
+              <button onClick={() => setPeriod('month')}
+                className={`px-3 py-1 rounded-md font-medium ${period === 'month' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>
+                Mês
+              </button>
+              <button onClick={() => setPeriod('year')}
+                className={`px-3 py-1 rounded-md font-medium ${period === 'year' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>
+                Ano
+              </button>
+              <button onClick={() => setPeriod('custom')}
+                className={`px-3 py-1 rounded-md font-medium ${period === 'custom' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>
+                Período
+              </button>
+            </div>
+
+            {/* Navegação por mês */}
+            {period === 'month' && (
+              <div className="inline-flex items-center gap-1 text-xs">
+                <button onClick={() => shiftMonth(-1)} className="h-7 w-7 inline-flex items-center justify-center rounded-md hover:bg-slate-100">
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                </button>
+                <span className="min-w-[110px] text-center font-medium capitalize">{getMonthName(month)} {year}</span>
+                <button onClick={() => shiftMonth(1)} className="h-7 w-7 inline-flex items-center justify-center rounded-md hover:bg-slate-100">
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+
+            {/* Navegação por ano */}
+            {period === 'year' && (
+              <div className="inline-flex items-center gap-1 text-xs">
+                <button onClick={() => setYear(year - 1)} className="h-7 w-7 inline-flex items-center justify-center rounded-md hover:bg-slate-100">
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                </button>
+                <span className="min-w-[60px] text-center font-medium">{year}</span>
+                <button onClick={() => setYear(year + 1)} className="h-7 w-7 inline-flex items-center justify-center rounded-md hover:bg-slate-100">
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+
+            {/* Range custom */}
+            {period === 'custom' && (
+              <div className="inline-flex items-center gap-1 text-xs">
+                <input type="month" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)}
+                  className="h-7 px-2 rounded-md border border-slate-200 text-xs" />
+                <span className="text-slate-400">→</span>
+                <input type="month" value={customTo} onChange={(e) => setCustomTo(e.target.value)}
+                  className="h-7 px-2 rounded-md border border-slate-200 text-xs" />
+              </div>
+            )}
+
+            <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={() => window.print()}>
+              <Printer className="h-3.5 w-3.5" />
+              PDF
+            </Button>
           </div>
-          <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={() => window.print()}>
-            <Printer className="h-3.5 w-3.5" />
-            Exportar PDF
-          </Button>
+
+          {/* Toggle comparativo — só faz sentido em mês/ano */}
+          {period !== 'custom' && (
+            <label className="inline-flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer select-none">
+              <input type="checkbox" checked={comparing} onChange={(e) => setComparing(e.target.checked)}
+                className="h-3.5 w-3.5 rounded border-slate-300" />
+              Comparar com {period === 'month' ? 'mês anterior' : 'ano anterior'}
+            </label>
+          )}
         </div>
       </div>
 
@@ -247,6 +348,7 @@ export function PanoramaClient() {
               prevValue={prevIncome}
               color="emerald"
               icon={<TrendingUp className="h-4 w-4" />}
+              showComparison={comparing}
             />
             <KPICard
               label="Despesa"
@@ -257,6 +359,7 @@ export function PanoramaClient() {
               color="red"
               icon={<TrendingDown className="h-4 w-4" />}
               invertDelta
+              showComparison={comparing}
             />
             <KPICard
               label="Lucro líquido"
@@ -266,6 +369,7 @@ export function PanoramaClient() {
               prevValue={prevLucro}
               color={lucro >= 0 ? 'blue' : 'red'}
               icon={<Wallet className="h-4 w-4" />}
+              showComparison={comparing}
             />
             <Card className="border border-slate-100 shadow-sm">
               <CardContent className="p-4">
@@ -518,9 +622,10 @@ interface KPICardProps {
   color: 'emerald' | 'red' | 'blue'
   icon: React.ReactNode
   invertDelta?: boolean
+  showComparison?: boolean
 }
 
-function KPICard({ label, value, delta, prevLabel, prevValue, color, icon, invertDelta }: KPICardProps) {
+function KPICard({ label, value, delta, prevLabel, prevValue, color, icon, invertDelta, showComparison }: KPICardProps) {
   // Paleta Fysi: brand-soft + ink + variações refinadas
   const palette: Record<string, { bg: string; border: string; text: string; deltaUp: string; deltaDown: string }> = {
     emerald: { bg: 'bg-[color:var(--brand-soft)]/60', border: 'border-[color:var(--brand)]/20', text: 'text-[color:var(--brand-deep)]', deltaUp: 'text-[color:var(--brand-deep)]', deltaDown: 'text-red-700' },
@@ -540,13 +645,14 @@ function KPICard({ label, value, delta, prevLabel, prevValue, color, icon, inver
           <span className={p.text}>{icon}</span>
         </div>
         <p className={`display-num text-2xl sm:text-3xl private ${p.text} break-words tracking-tight`}>{formatCurrency(value)}</p>
-        {prevValue > 0 ? (
+        {showComparison && prevValue > 0 && (
           <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
             <DeltaIcon className={`h-3 w-3 ${deltaClass}`} />
             <span className={deltaClass}>{Math.abs(delta).toFixed(0)}%</span>
             <span>vs {prevLabel}</span>
           </p>
-        ) : (
+        )}
+        {showComparison && prevValue === 0 && (
           <p className="text-xs text-slate-400 mt-1">sem comparativo</p>
         )}
       </CardContent>
