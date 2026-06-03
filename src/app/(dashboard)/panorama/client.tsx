@@ -385,73 +385,7 @@ export function PanoramaClient() {
             </Card>
           </div>
 
-          {/* MRR + Custos fixos */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 break-inside-avoid">
-            <Card className="border border-emerald-100 bg-emerald-50/40 shadow-sm">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <Repeat className="h-4 w-4 text-emerald-600" />
-                    <span className="text-sm font-semibold text-slate-700">MRR · Receita recorrente mensal</span>
-                  </div>
-                  <Link href="/previsao" className="text-xs text-emerald-700 hover:underline">Ver →</Link>
-                </div>
-                <p className="display-num text-2xl sm:text-3xl text-emerald-800 break-words private">{formatCurrency(mrr)} <span className="text-xs font-normal text-stone-500 ml-1 not-italic">/ mês</span></p>
-                <p className="text-xs text-slate-500 mt-1">
-                  {recurringClients.filter((c) => c.active).length} cliente(s) ativo(s) · ARR projetado {formatCurrency(arr)}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="border border-red-100 bg-red-50/40 shadow-sm">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <Briefcase className="h-4 w-4 text-red-600" />
-                    <span className="text-sm font-semibold text-slate-700">Custos fixos mensais</span>
-                  </div>
-                  <Link href="/previsao" className="text-xs text-red-700 hover:underline">Ver →</Link>
-                </div>
-                <p className="display-num text-2xl sm:text-3xl text-red-800 break-words private">{formatCurrency(monthlyFixedCosts)} <span className="text-xs font-normal text-stone-500 ml-1 not-italic">/ mês</span></p>
-                <p className="text-xs text-slate-500 mt-1">
-                  Equipe + Ferramentas + Infra · projeção anual {formatCurrency(monthlyFixedCosts * 12)}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Evolução / tendência */}
-          <Card className="border border-slate-100 shadow-sm break-inside-avoid">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-semibold text-slate-700">Evolução</h2>
-                <div className="inline-flex rounded-lg bg-slate-100 p-0.5 text-xs">
-                  <button onClick={() => setMonthsBack(6)}
-                    className={`px-2.5 py-1 rounded-md font-medium ${monthsBack === 6 ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>
-                    6 meses
-                  </button>
-                  <button onClick={() => setMonthsBack(12)}
-                    className={`px-2.5 py-1 rounded-md font-medium ${monthsBack === 12 ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>
-                    12 meses
-                  </button>
-                </div>
-              </div>
-              <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={trend} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                  <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
-                  <Tooltip formatter={(v) => formatCurrency(Number(v))} />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Bar dataKey="receita" name="Receita" fill="#10b981" radius={[3, 3, 0, 0]} />
-                  <Bar dataKey="despesa" name="Despesa" fill="#f43f5e" radius={[3, 3, 0, 0]} />
-                  <Bar dataKey="lucro" name="Lucro" fill="#3b82f6" radius={[3, 3, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* Breakdowns */}
+          {/* Breakdowns — por tipo de projeto + por categoria (movido pra cima) */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 break-inside-avoid">
             {/* Receita por tipo */}
             <Card className="border border-slate-100 shadow-sm">
@@ -521,6 +455,37 @@ export function PanoramaClient() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Evolução / tendência */}
+          <Card className="border border-slate-100 shadow-sm break-inside-avoid">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-semibold text-slate-700">Evolução</h2>
+                <div className="inline-flex rounded-lg bg-slate-100 p-0.5 text-xs">
+                  <button onClick={() => setMonthsBack(6)}
+                    className={`px-2.5 py-1 rounded-md font-medium ${monthsBack === 6 ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>
+                    6 meses
+                  </button>
+                  <button onClick={() => setMonthsBack(12)}
+                    className={`px-2.5 py-1 rounded-md font-medium ${monthsBack === 12 ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>
+                    12 meses
+                  </button>
+                </div>
+              </div>
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={trend} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
+                  <Tooltip formatter={(v) => formatCurrency(Number(v))} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Bar dataKey="receita" name="Receita" fill="#10b981" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="despesa" name="Despesa" fill="#f43f5e" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="lucro" name="Lucro" fill="#3b82f6" radius={[3, 3, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
 
           {/* Despesa por origem */}
           {originRows.length > 0 && (
@@ -594,6 +559,41 @@ export function PanoramaClient() {
               </CardContent>
             </Card>
           )}
+
+          {/* MRR + Custos fixos (movido pro final) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 break-inside-avoid">
+            <Card className="border border-emerald-100 bg-emerald-50/40 shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Repeat className="h-4 w-4 text-emerald-600" />
+                    <span className="text-sm font-semibold text-slate-700">MRR · Receita recorrente mensal</span>
+                  </div>
+                  <Link href="/previsao" className="text-xs text-emerald-700 hover:underline">Ver →</Link>
+                </div>
+                <p className="display-num text-2xl sm:text-3xl text-emerald-800 break-words private">{formatCurrency(mrr)} <span className="text-xs font-normal text-stone-500 ml-1 not-italic">/ mês</span></p>
+                <p className="text-xs text-slate-500 mt-1">
+                  {recurringClients.filter((c) => c.active).length} cliente(s) ativo(s) · ARR projetado {formatCurrency(arr)}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border border-red-100 bg-red-50/40 shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Briefcase className="h-4 w-4 text-red-600" />
+                    <span className="text-sm font-semibold text-slate-700">Custos fixos mensais</span>
+                  </div>
+                  <Link href="/previsao" className="text-xs text-red-700 hover:underline">Ver →</Link>
+                </div>
+                <p className="display-num text-2xl sm:text-3xl text-red-800 break-words private">{formatCurrency(monthlyFixedCosts)} <span className="text-xs font-normal text-stone-500 ml-1 not-italic">/ mês</span></p>
+                <p className="text-xs text-slate-500 mt-1">
+                  Equipe + Ferramentas + Infra · projeção anual {formatCurrency(monthlyFixedCosts * 12)}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
 
           {/* Atalhos */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 print:hidden">
