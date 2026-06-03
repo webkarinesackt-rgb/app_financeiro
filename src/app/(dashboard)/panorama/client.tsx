@@ -11,7 +11,7 @@ import {
 import {
   TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
   Wallet, Target, Repeat, Briefcase, AlertCircle, ChevronRight, Printer,
-  ChevronLeft,
+  ChevronLeft, Eye, EyeOff,
 } from 'lucide-react'
 import { getTransactions } from '@/lib/transactions'
 import { getRecurringClients, sumMonthlyRecurringRevenue } from '@/lib/recurring-clients'
@@ -62,6 +62,7 @@ export function PanoramaClient() {
   const [fixedCosts, setFixedCosts] = useState<FixedCost[]>([])
   const [loading, setLoading] = useState(true)
   const [monthsBack, setMonthsBack] = useState<6 | 12>(6)
+  const [showEvolution, setShowEvolution] = useState(true)
   const [trend, setTrend] = useState<{ name: string; receita: number; despesa: number; lucro: number }[]>([])
 
   const prevMonth = month === 1 ? 12 : month - 1
@@ -460,30 +461,43 @@ export function PanoramaClient() {
           <Card className="border border-slate-100 shadow-sm break-inside-avoid">
             <CardContent className="p-5">
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-semibold text-slate-700">Evolução</h2>
-                <div className="inline-flex rounded-lg bg-slate-100 p-0.5 text-xs">
-                  <button onClick={() => setMonthsBack(6)}
-                    className={`px-2.5 py-1 rounded-md font-medium ${monthsBack === 6 ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>
-                    6 meses
-                  </button>
-                  <button onClick={() => setMonthsBack(12)}
-                    className={`px-2.5 py-1 rounded-md font-medium ${monthsBack === 12 ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>
-                    12 meses
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-semibold text-slate-700">Evolução</h2>
+                  <button
+                    onClick={() => setShowEvolution(!showEvolution)}
+                    title={showEvolution ? 'Ocultar gráfico' : 'Mostrar gráfico'}
+                    className="h-6 w-6 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors print:hidden"
+                  >
+                    {showEvolution ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                   </button>
                 </div>
+                {showEvolution && (
+                  <div className="inline-flex rounded-lg bg-slate-100 p-0.5 text-xs">
+                    <button onClick={() => setMonthsBack(6)}
+                      className={`px-2.5 py-1 rounded-md font-medium ${monthsBack === 6 ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>
+                      6 meses
+                    </button>
+                    <button onClick={() => setMonthsBack(12)}
+                      className={`px-2.5 py-1 rounded-md font-medium ${monthsBack === 12 ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>
+                      12 meses
+                    </button>
+                  </div>
+                )}
               </div>
-              <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={trend} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                  <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
-                  <Tooltip formatter={(v) => formatCurrency(Number(v))} />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Bar dataKey="receita" name="Receita" fill="#10b981" radius={[3, 3, 0, 0]} />
-                  <Bar dataKey="despesa" name="Despesa" fill="#f43f5e" radius={[3, 3, 0, 0]} />
-                  <Bar dataKey="lucro" name="Lucro" fill="#3b82f6" radius={[3, 3, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {showEvolution && (
+                <ResponsiveContainer width="100%" height={240}>
+                  <BarChart data={trend} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
+                    <Tooltip formatter={(v) => formatCurrency(Number(v))} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Bar dataKey="receita" name="Receita" fill="#10b981" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="despesa" name="Despesa" fill="#f43f5e" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="lucro" name="Lucro" fill="#3b82f6" radius={[3, 3, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
 
