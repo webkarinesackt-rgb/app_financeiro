@@ -6,13 +6,19 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
   AlertTriangle, Phone, ChevronRight, CheckCircle2, Clock, Briefcase, Repeat,
+  StickyNote, Plus,
 } from 'lucide-react'
 import { OverdueList } from '@/components/dashboard/overdue-list'
+import { RemindersCard } from '@/components/dashboard/reminders-card'
+import { NotesPanel } from '@/components/notes/notes-panel'
 import { getACobrarData, whatsappLink, type ACobrarData } from '@/lib/a-cobrar'
 import { formatCurrency } from '@/lib/format'
 import { CLOSING_STATUS_LABELS } from '@/types'
 
+type Tab = 'cobrar' | 'notes'
+
 export function ACobrarClient() {
+  const [tab, setTab] = useState<Tab>('cobrar')
   const [data, setData] = useState<ACobrarData | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -42,6 +48,26 @@ export function ACobrarClient() {
           </p>
         </div>
       </div>
+
+      {/* Tabs */}
+      <div className="inline-flex rounded-lg bg-slate-100 p-0.5 text-xs">
+        <button onClick={() => setTab('cobrar')}
+          className={`px-3 py-1.5 rounded-md font-medium inline-flex items-center gap-1.5 ${tab === 'cobrar' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>
+          <AlertTriangle className="h-3.5 w-3.5" /> A Cobrar
+        </button>
+        <button onClick={() => setTab('notes')}
+          className={`px-3 py-1.5 rounded-md font-medium inline-flex items-center gap-1.5 ${tab === 'notes' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>
+          <StickyNote className="h-3.5 w-3.5" /> Anotações
+        </button>
+      </div>
+
+      {tab === 'notes' && <NotesPanel />}
+
+      {tab === 'cobrar' && (
+        <div className="space-y-5">
+
+      {/* Adicionar cobrança manual (lista de pendências do user) */}
+      <RemindersCard type="invoice_pending" />
 
       {/* Resumo */}
       {loading ? (
@@ -204,6 +230,9 @@ export function ACobrarClient() {
           <OverdueList />
         </CardContent>
       </Card>
+
+        </div>
+      )}
     </div>
   )
 }
