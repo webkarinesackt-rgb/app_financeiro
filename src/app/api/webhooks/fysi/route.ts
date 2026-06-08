@@ -55,14 +55,30 @@ interface PagamentoData {
   observacao: string | null
 }
 
+interface CobrancaData {
+  tipo: "mensal" | "pontual"
+  nome: string
+  empresa: string | null
+  whatsapp: string | null
+  email: string | null
+  descricao: string | null
+  valor: number
+  mesReferencia: string
+  pagoEm: string
+  forma: string
+  observacao: string
+}
+
 interface WebhookBody {
   event: string
   emittedAt: string
   source: string
   clientId: string
-  cliente: BriefingCliente
+  cliente?: BriefingCliente
   contrato?: ContratoData
   pagamento?: PagamentoData
+  cobranca?: CobrancaData
+  cobrancaId?: string
 }
 
 const PROJECT_KIND_LABELS: Record<string, string> = {
@@ -156,8 +172,8 @@ export async function POST(request: NextRequest) {
 
   // ── contrato.assinado: upsert ──
   if (body.event === 'contrato.assinado') {
-    if (!body.contrato) {
-      return NextResponse.json({ error: 'missing contrato' }, { status: 400 })
+    if (!body.contrato || !body.cliente) {
+      return NextResponse.json({ error: 'missing contrato or cliente' }, { status: 400 })
     }
 
     const totalValue = parseValorString(body.contrato.valor_parcelamento)
@@ -234,8 +250,8 @@ export async function POST(request: NextRequest) {
 
   // ── pagamento.atualizado: update do project (se existir) ──
   if (body.event === 'pagamento.atualizado') {
-    if (!body.pagamento) {
-      return NextResponse.json({ error: 'missing pagamento' }, { status: 400 })
+    if (!body.pagamento || !body.cliente) {
+      return NextResponse.json({ error: 'missing pagamento or cliente' }, { status: 400 })
     }
 
     const existing = await findProjectByFysiId(admin, briefingClientId)
@@ -279,7 +295,71 @@ export async function POST(request: NextRequest) {
     })
   }
 
+  // ── cobranca.paga: cria uma transaction de receita ──
+  if (body.event === 'cobranca.paga' && body.cobranca) {
+    const c = body.cobranca
+
+    const description =
+      c.descricao && c.descricao.trim()
+        ? `${c.descricao} — ${c.nome}`
+        : `Cobrança ${c.tipo} — ${c.nome}`
+
+    const tag =
+      c.tipo === 'mensal'
+        ? `Recorrente ${c.mesReferencia}`
+        : `Pontual ${c.mesReferencia}`
+
+    // external_id estável: cobrancaId + mesReferencia (evita duplicar
+    // se o mesmo pagamento for re-disparado).
+    const externalId = `cobranca:${body.cobrancaId ?? body.clientId}:${c.mesReferencia}`
+
+    const { error: upsertErr } = await admin
+      .from('transactions')
+      .upsert(
+        {
+          user_id: ownerUserId,
+          type: 'income',
+          amount: c.valor,
+          description,
+          category: 'custom',
+          custom_category:
+            c.tipo === 'mensal'
+              ? 'Receita recorrente'
+              : 'Receita pontual',
+          date: c.pagoEm.slice(0, 10),
+          payment_method: mapForma(c.forma),
+          external_id: externalId,
+          notes: `${tag} • briefing_app • ${c.forma}${
+            c.observacao ? ` • ${c.observacao}` : ''
+          }`,
+        },
+        { onConflict: 'external_id' },
+      )
+
+    if (upsertErr) {
+      console.error('[fysi webhook] cobranca upsert error:', upsertErr)
+      return NextResponse.json({ error: upsertErr.message }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      ok: true,
+      action: 'cobranca-tx-criada',
+      externalId,
+    })
+  }
+
   return NextResponse.json({ ok: true, action: 'unknown-event', event: body.event })
+}
+
+/** Mapeia forma de pagamento livre pra enum do app financeiro. */
+function mapForma(forma: string): string {
+  const f = forma.toLowerCase()
+  if (f.includes('pix')) return 'pix'
+  if (f.includes('cart') || f.includes('credit') || f.includes('debit'))
+    return 'credit_card'
+  if (f.includes('boleto')) return 'bank_slip'
+  if (f.includes('transfer')) return 'transfer'
+  return 'other'
 }
 
 /**
@@ -290,9 +370,9 @@ function buildNotes(body: WebhookBody): string {
   const lines: string[] = []
   lines.push(makeFysiMarker(body.clientId))
   lines.push(`Origem: briefing_app`)
-  if (body.cliente.email) lines.push(`Email: ${body.cliente.email}`)
-  if (body.cliente.cpf) lines.push(`CPF: ${body.cliente.cpf}`)
-  if (body.cliente.cnpj) lines.push(`CNPJ: ${body.cliente.cnpj}`)
+  if (body.cliente?.email) lines.push(`Email: ${body.cliente.email}`)
+  if (body.cliente?.cpf) lines.push(`CPF: ${body.cliente.cpf}`)
+  if (body.cliente?.cnpj) lines.push(`CNPJ: ${body.cliente.cnpj}`)
 
   if (body.contrato) {
     if (body.contrato.pacote_nome) lines.push(`Pacote: ${body.contrato.pacote_nome}`)
