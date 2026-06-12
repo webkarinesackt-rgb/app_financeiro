@@ -32,6 +32,7 @@ const settingsItems: { href: string; label: string; workspaces: WorkspaceType[] 
   { href: '/settings/cards',        label: 'Cartões de Crédito',  workspaces: ['business', 'personal'] },
   { href: '/settings/categories',   label: 'Categorias',          workspaces: ['business', 'personal'] },
   { href: '/settings/integrations', label: 'Integrações (Asaas)', workspaces: ['business'] },
+  { href: '/settings/api',          label: 'API Keys',            workspaces: ['business', 'personal'] },
 ]
 
 export function Sidebar() {
